@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Campaigns</title>
+</head>
+<body>
+  <h2>📁 Campaigns List</h2>
+  <table border="1">
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+    {% for c in campaigns %}
+    <tr>
+      <td>{{ c[0] }}</td>
+      <td>{{ c[1] }}</td>
+      <td>{{ c[2] }}</td>
+      <td>
+        <!-- View Leads -->
+        <a href="{{ url_for('campaign_detail', campaign_id=c[0]) }}">👥 View Leads</a>
+
+        <!-- Delete Campaign -->
+        <form method="POST" action="{{ url_for('delete_campaign', campaign_id=c[0]) }}" style="display:inline;">
+          <button type="submit" onclick="return confirm('⚠️ Are you sure you want to delete this campaign?')">🗑️ Delete</button>
+        </form>
+
+        <!-- Send to n8n (only if approved) -->
+        {% if c[2] == 'approved' %}
+        <form method="POST" action="{{ url_for('send_to_n8n', campaign_id=c[0]) }}" style="display:inline;">
+          <button type="submit" onclick="return confirm('Send approved campaign to n8n?')">🚀 Send to n8n</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

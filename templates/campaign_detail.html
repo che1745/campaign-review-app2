@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head><title>Review Campaign</title></head>
+<body>
+  <h2>📋 Review and Confirm Leads</h2>
+  <table border="1">
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Company</th>
+      <th>Domain</th>
+      <th>Score</th>
+      <th>Label</th><th>Description</th>
+      <th>Action</th>
+    </tr>
+    {% for lead in leads %}
+    <tr>
+      <td>{{ lead[1] }} {{ lead[2] }}</td>
+      <td>{{ lead[3] }}</td>
+      <td>{{ lead[4] }}</td>
+      <td>{{ lead[5] }}</td>
+      <td>{{ lead[6] }}</td>
+      <td>{{ lead[7] }}</td>
+      <td>{{ lead[8] }}</td>
+      <td>
+        <form method="POST" action="{{ url_for('delete_lead', lead_id=lead[0], campaign_id=campaign_id) }}" style="display:inline;">
+          <button type="submit">🗑️Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <br>
+  <a href="{{ url_for('add_lead', campaign_id=campaign_id) }}"><button>➕ Add New Lead</button></a>
+
+  <form method="POST" action="{{ url_for('approve_campaign', campaign_id=campaign_id) }}">
+    <button type="submit">✅ Approve and Continue</button>
+  </form>
+
+  <br><a href="{{ url_for('campaigns') }}">⬅️ Back to Campaigns</a>
+</body>
+</html>
