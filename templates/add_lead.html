@@ -1,23 +1,468 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Add Lead</title>
+  <title>Add New Profile</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    
+    h2 {
+      color: #2c3e50;
+      margin-bottom: 30px;
+      text-align: center;
+      font-size: 2.2em;
+      font-weight: 600;
+    }
+    
+    .form-group {
+      margin-bottom: 25px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #495057;
+      font-size: 14px;
+    }
+    
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+      transition: all 0.3s;
+      background: #f8f9fa;
+    }
+    
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      transform: translateY(-2px);
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .form-row .form-group {
+      flex: 1;
+    }
+    
+    .score-input {
+      position: relative;
+    }
+    
+    .score-slider {
+      width: 100%;
+      margin: 15px 0;
+      height: 8px;
+      border-radius: 5px;
+      background: #e9ecef;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    
+    .score-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #667eea;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+      transition: all 0.3s;
+    }
+    
+    .score-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .score-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #667eea;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+    }
+    
+    .score-display {
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+      color: #667eea;
+      margin: 15px 0;
+      padding: 10px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(102, 126, 234, 0.05));
+      border-radius: 10px;
+    }
+    
+    .btn {
+      padding: 15px 30px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #74b9ff, #0984e3);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(116, 185, 255, 0.3);
+    }
+    
+    .btn-secondary {
+      background: linear-gradient(135deg, #6c757d, #495057);
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+    }
+    
+    .button-group {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 2px solid #f0f0f0;
+    }
+    
+    .back-link {
+      color: #667eea;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 15px;
+      border: 2px solid #667eea;
+      border-radius: 25px;
+      transition: all 0.3s;
+    }
+    
+    .back-link:hover {
+      background: #667eea;
+      color: white;
+      transform: translateY(-2px);
+    }
+    
+    .required {
+      color: #dc3545;
+    }
+    
+    .form-help {
+      font-size: 12px;
+      color: #6c757d;
+      margin-top: 5px;
+      font-style: italic;
+    }
+    
+    .validation-error {
+      color: #dc3545;
+      font-size: 14px;
+      margin-top: 5px;
+      display: none;
+    }
+    
+    .score-badges {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+      font-size: 12px;
+    }
+    
+    .score-badge {
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-weight: 500;
+    }
+    
+    .badge-low { 
+      background: linear-gradient(135deg, #ff7675, #d63031);
+      color: white;
+    }
+    .badge-medium { 
+      background: linear-gradient(135deg, #fdcb6e, #e17055);
+      color: white;
+    }
+    .badge-high { 
+      background: linear-gradient(135deg, #00b894, #00a085);
+      color: white;
+    }
+    
+    .flash-messages {
+      margin-bottom: 20px;
+    }
+    
+    .flash-message {
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    
+    .flash-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .flash-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    @media (max-width: 768px) {
+      .form-row {
+        flex-direction: column;
+      }
+      
+      .container {
+        padding: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h2>🧑‍💼 Add New Lead</h2>
-  <form method="POST">
-    <label>First Name: <input type="text" name="first_name" required></label><br>
-    <label>Last Name: <input type="text" name="last_name" required></label><br>
-    <label>Email: <input type="email" name="email" required></label><br>
-    <label>Company: <input type="text" name="company" required></label><br>
-    <label>Domain: <input type="text" name="domain" required></label><br>
-    <label>Score: <input type="number" name="score" value="0"></label><br>
-    <label>Label: <input type="text" name="label" required></label><br>
-    <label>Description:<br>
-      <textarea name="description" rows="5" cols="40" required></textarea>
-    </label><br><br>
-    <button type="submit">➕ Add Lead</button>
-  </form>
-  <br><a href="{{ url_for('campaign_detail', campaign_id=campaign_id) }}">⬅️ Back to Campaign</a>
+  <div class="container">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <h2>🧑‍💼 Add New Profile</h2>
+    
+    <form method="POST" id="leadForm" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="first_name">First Name <span class="required">*</span></label>
+          <input type="text" id="first_name" name="first_name" required>
+          <div class="validation-error" id="first_name_error">First name is required</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="last_name">Last Name <span class="required">*</span></label>
+          <input type="text" id="last_name" name="last_name" required>
+          <div class="validation-error" id="last_name_error">Last name is required</div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="email">Email <span class="required">*</span></label>
+        <input type="email" id="email" name="email" required>
+        <div class="form-help">Please enter a valid email address</div>
+        <div class="validation-error" id="email_error">Valid email is required</div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="company">Company <span class="required">*</span></label>
+          <input type="text" id="company" name="company" required>
+          <div class="validation-error" id="company_error">Company name is required</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="domain">Domain</label>
+          <input type="text" id="domain" name="domain" placeholder="e.g., company.com">
+          <div class="form-help">Company website domain (optional)</div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="label">Label <span class="required">*</span></label>
+        <input type="text" id="label" name="label" placeholder="e.g.sustainable fashion,packaging innovation" required>
+        <div class="validation-error" id="label_error">label is required</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="score">Score</label>
+        <div class="score-input">
+          <input type="range" id="scoreSlider" class="score-slider" min="0" max="10" value="5" oninput="updateScore(this.value)">
+          <input type="hidden" id="score" name="score" value="5">
+          <div class="score-display" id="scoreDisplay">5</div>
+          <div class="score-badges">
+            <span class="score-badge badge-low">0-4: Low</span>
+            <span class="score-badge badge-medium">5-7: Medium</span>
+            <span class="score-badge badge-high">8-10: High</span>
+          </div>
+        </div>
+        <div class="form-help">Rate the profile quality from 0 (lowest) to 10 (highest)</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="description">Description <span class="required">*</span></label>
+        <textarea id="description" name="description" rows="4" placeholder="Enter description, notes, or qualification details..." required></textarea>
+        <div class="form-help">Provide details about the profile, their interests, qualification status, etc.</div>
+        <div class="validation-error" id="description_error">Description is required</div>
+      </div>
+      
+      <div class="button-group">
+        <button type="submit" class="btn btn-primary">➕ Add Profile</button>
+        <a href="{{ url_for('campaign_detail', campaign_id=campaign_id) }}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+    
+    <div style="text-align: center;">
+      <a href="{{ url_for('campaign_detail', campaign_id=campaign_id) }}" class="back-link">⬅️ Back to Campaign</a>
+    </div>
+  </div>
+
+  <script>
+    function updateScore(value) {
+      document.getElementById('score').value = value;
+      document.getElementById('scoreDisplay').textContent = value;
+      
+      // Update display color based on score
+      const display = document.getElementById('scoreDisplay');
+      if (value <= 4) {
+        display.style.background = 'linear-gradient(135deg, rgba(255, 118, 117, 0.2), rgba(214, 48, 49, 0.1))';
+        display.style.color = '#d63031';
+      } else if (value <= 7) {
+        display.style.background = 'linear-gradient(135deg, rgba(253, 203, 110, 0.2), rgba(225, 112, 85, 0.1))';
+        display.style.color = '#e17055';
+      } else {
+        display.style.background = 'linear-gradient(135deg, rgba(0, 184, 148, 0.2), rgba(0, 160, 133, 0.1))';
+        display.style.color = '#00a085';
+      }
+    }
+    
+    function validateForm() {
+      let isValid = true;
+      
+      // Clear previous errors
+      document.querySelectorAll('.validation-error').forEach(error => {
+        error.style.display = 'none';
+      });
+      
+      // Validate required fields
+      const requiredFields = [
+        { id: 'first_name', name: 'First name' },
+        { id: 'last_name', name: 'Last name' },
+        { id: 'email', name: 'Email' },
+        { id: 'company', name: 'Company' },
+        { id: 'label', name: 'Label' },
+        { id: 'description', name: 'Description' }
+      ];
+      
+      requiredFields.forEach(field => {
+        const input = document.getElementById(field.id);
+        const error = document.getElementById(field.id + '_error');
+        
+        if (!input.value.trim()) {
+          error.style.display = 'block';
+          isValid = false;
+        }
+      });
+      
+      // Validate email format
+      const email = document.getElementById('email');
+      const emailError = document.getElementById('email_error');
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      
+      if (email.value.trim() && !emailPattern.test(email.value.trim())) {
+        emailError.textContent = 'Please enter a valid email address';
+        emailError.style.display = 'block';
+        isValid = false;
+      }
+      
+      return isValid;
+    }
+    
+    // Auto-populate domain from email
+    document.getElementById('email').addEventListener('blur', function() {
+      const email = this.value.trim();
+      const domainField = document.getElementById('domain');
+      
+      if (email && email.includes('@') && !domainField.value.trim()) {
+        const domain = email.split('@')[1];
+        domainField.value = domain;
+      }
+    });
+    
+    // Form submission with validation
+    document.getElementById('leadForm').addEventListener('submit', function(e) {
+      if (!validateForm()) {
+        e.preventDefault();
+        // Scroll to first error
+        const firstError = document.querySelector('.validation-error[style*="block"]');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    });
+    
+    // Real-time validation
+    document.querySelectorAll('input[required], textarea[required]').forEach(input => {
+      input.addEventListener('blur', function() {
+        const error = document.getElementById(this.id + '_error');
+        if (error) {
+          if (!this.value.trim()) {
+            error.style.display = 'block';
+          } else {
+            error.style.display = 'none';
+          }
+        }
+      });
+    });
+    
+    // Initialize score display
+    updateScore(5);
+  </script>
 </body>
 </html>

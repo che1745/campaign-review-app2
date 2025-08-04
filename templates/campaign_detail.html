@@ -1,43 +1,814 @@
 <!DOCTYPE html>
 <html>
-<head><title>Review Campaign</title></head>
+<head>
+  <title>Campaign Details</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .header h2 {
+      color: #2c3e50;
+      margin: 0;
+      font-size: 2.2em;
+      font-weight: 600;
+    }
+    
+    .back-link {
+      color: #667eea;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      padding: 10px 20px;
+      border: 2px solid #667eea;
+      border-radius: 25px;
+      transition: all 0.3s;
+    }
+    
+    .back-link:hover {
+      background: #667eea;
+      color: white;
+      transform: translateY(-2px);
+    }
+    
+    .search-container {
+      margin-bottom: 25px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .search-input {
+      padding: 12px 20px;
+      border: 2px solid #e9ecef;
+      border-radius: 25px;
+      font-size: 16px;
+      flex: 1;
+      min-width: 300px;
+      max-width: 500px;
+      transition: all 0.3s;
+    }
+    
+    .search-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .clear-btn {
+      padding: 12px 20px;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    
+    .clear-btn:hover {
+      background: #5a6268;
+      transform: translateY(-1px);
+    }
+    
+    .status-filter {
+      padding: 12px 15px;
+      border: 2px solid #e9ecef;
+      border-radius: 25px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    
+    .status-filter:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .table-container {
+      overflow-x: auto;
+      max-height: 600px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      margin-bottom: 25px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      min-width: 1200px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    th {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #f8f9fa;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    
+    tr:hover {
+      background-color: #e3f2fd;
+      transform: scale(1.005);
+      transition: all 0.2s;
+    }
+    
+    .inactive-row {
+      opacity: 0.6;
+      background-color: #f8f9fa !important;
+    }
+    
+    .inactive-row:hover {
+      background-color: #e9ecef !important;
+    }
+    
+    .serial-number {
+      font-weight: bold;
+      color: #667eea;
+      background: rgba(102, 126, 234, 0.1);
+      padding: 5px 8px;
+      border-radius: 15px;
+      text-align: center;
+      min-width: 30px;
+    }
+    
+    .score-badge {
+      padding: 6px 10px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: bold;
+      color: white;
+      text-align: center;
+      min-width: 25px;
+    }
+    
+    .score-high { 
+      background: linear-gradient(135deg, #00b894, #00a085);
+    }
+    .score-medium { 
+      background: linear-gradient(135deg, #fdcb6e, #e17055);
+    }
+    .score-low { 
+      background: linear-gradient(135deg, #ff7675, #d63031);
+    }
+    
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: center;
+      min-width: 60px;
+    }
+    
+    .status-active {
+      background: linear-gradient(135deg, #00b894, #00a085);
+      color: white;
+    }
+    
+    .status-inactive {
+      background: linear-gradient(135deg, #ff7675, #e17055);
+      color: white;
+    }
+    
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.3s;
+      margin: 2px;
+    }
+    
+    .btn-delete {
+      background: linear-gradient(135deg, #ff7675, #e17055);
+      color: white;
+    }
+    
+    .btn-toggle {
+      background: linear-gradient(135deg, #fdcb6e, #e17055);
+      color: white;
+    }
+    
+    .btn-activate {
+      background: linear-gradient(135deg, #00b894, #00a085);
+      color: white;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #74b9ff, #0984e3);
+      color: white;
+      padding: 12px 25px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #00b894, #00a085);
+      color: white;
+      padding: 12px 25px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .btn-warning {
+      background: linear-gradient(135deg, #fdcb6e, #e17055);
+      color: white;
+      padding: 12px 25px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .pagination {
+      margin: 25px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .pagination button {
+      padding: 10px 15px;
+      border: 2px solid #667eea;
+      background: white;
+      color: #667eea;
+      cursor: pointer;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    
+    .pagination button:hover:not(:disabled) {
+      background: #667eea;
+      color: white;
+    }
+    
+    .pagination button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    
+    .pagination .current {
+      background: #667eea;
+      color: white;
+    }
+    
+    .records-info {
+      margin-bottom: 15px;
+      color: #6c757d;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 500;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .stats-info {
+      display: flex;
+      gap: 20px;
+      font-size: 13px;
+      color: #495057;
+    }
+    
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .stat-active {
+      color: #00a085;
+      font-weight: 600;
+    }
+    
+    .stat-inactive {
+      color: #e17055;
+      font-weight: 600;
+    }
+    
+    .no-results {
+      text-align: center;
+      padding: 60px;
+      color: #6c757d;
+    }
+    
+    .no-results h3 {
+      color: #495057;
+      margin-bottom: 10px;
+    }
+    
+    .actions-bar {
+      display: flex;
+      gap: 15px;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 25px;
+      padding: 20px;
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      border-radius: 12px;
+    }
+    
+    .email-link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .email-link:hover {
+      text-decoration: underline;
+    }
+    
+    .company-cell {
+      max-width: 140px;
+      word-wrap: break-word;
+      font-weight: 500;
+    }
+    
+    .description-cell {
+      max-width: 180px;
+      word-wrap: break-word;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    
+    .name-cell {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    .flash-messages {
+      margin-bottom: 20px;
+    }
+    
+    .flash-message {
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    
+    .flash-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .flash-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .campaign-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #495057;
+      font-size: 1.1em;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+    }
+    
+    @media (max-width: 768px) {
+      .search-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .search-input {
+        min-width: auto;
+        max-width: none;
+      }
+      
+      .actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .btn-primary, .btn-success, .btn-warning {
+        text-align: center;
+        justify-content: center;
+      }
+      
+      .records-info {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .stats-info {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
 <body>
-  <h2>📋 Review and Confirm Leads</h2>
-  <table border="1">
-    <tr>
-      <th>Name</th>
-      <th>Email</th>
-      <th>Company</th>
-      <th>Domain</th>
-      <th>Score</th>
-      <th>Label</th><th>Description</th>
-      <th>Action</th>
-    </tr>
-    {% for lead in leads %}
-    <tr>
-      <td>{{ lead[1] }} {{ lead[2] }}</td>
-      <td>{{ lead[3] }}</td>
-      <td>{{ lead[4] }}</td>
-      <td>{{ lead[5] }}</td>
-      <td>{{ lead[6] }}</td>
-      <td>{{ lead[7] }}</td>
-      <td>{{ lead[8] }}</td>
-      <td>
-        <form method="POST" action="{{ url_for('delete_lead', lead_id=lead[0], campaign_id=campaign_id) }}" style="display:inline;">
-          <button type="submit">🗑️Delete</button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </table>
+  <div class="container">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
-  <br>
-  <a href="{{ url_for('add_lead', campaign_id=campaign_id) }}"><button>➕ Add New Lead</button></a>
+    <div class="header">
+      <h2>📋 Profiles Management</h2>
+      <a href="{{ url_for('campaigns') }}" class="back-link">⬅️ Back to Campaigns</a>
+    </div>
+    
+    <div class="campaign-title">
+      <span>📁</span>
+      <strong>Campaign:</strong> {{ campaign_name }}
+    </div>
+    
+    <div class="search-container">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search Profiles by name, email, company, domain..." />
+      <select id="statusFilter" class="status-filter">
+        <option value="">All Profiles</option>
+        <option value="active">Active Only</option>
+        <option value="inactive">Inactive Only</option>
+      </select>
+      <button class="clear-btn" onclick="clearFilters()">Clear</button>
+    </div>
+    
+    <div class="records-info">
+      <div>
+        <span>Showing <span id="recordsCount">0</span> Profiles</span>
+        <div class="stats-info">
+          <div class="stat-item">
+            <span>✅</span>
+            <span class="stat-active" id="activeCount">0</span>
+            <span>Active</span>
+          </div>
+          <div class="stat-item">
+            <span>❌</span>
+            <span class="stat-inactive" id="inactiveCount">0</span>  
+            <span>Inactive</span>
+          </div>
+        </div>
+      </div>
+      <span>Total selected: <span id="selectedCount">0</span></span>
+    </div>
+    
+    <div class="table-container">
+      <table id="leadsTable">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+            <th>S.No</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Company</th>
+            <th>Domain</th>
+            <th>Score</th>
+            <th>TopLabel</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          {% for lead in leads %}
+          <tr class="{% if lead[9] == 0 %}inactive-row{% endif %}" data-status="{% if lead[9] == 1 %}active{% else %}inactive{% endif %}">
+            <td><input type="checkbox" class="lead-checkbox" data-lead-id="{{ lead[0] }}"></td>
+            <td><span class="serial-number">{{ loop.index }}</span></td>
+            <td class="name-cell">{{ lead[1] }} {{ lead[2] }}</td>
+            <td><a href="mailto:{{ lead[3] }}" class="email-link">{{ lead[3] }}</a></td>
+            <td class="company-cell">{{ lead[4] }}</td>
+            <td>{{ lead[5] if lead[5] else '-' }}</td>
+            <td>
+              <span class="score-badge 
+                {% if lead[6] >= 8 %}score-high
+                {% elif lead[6] >= 5 %}score-medium
+                {% else %}score-low{% endif %}">{{ lead[6] }}</span>
+            </td>
+            <td>{{ lead[7] if lead[7] else '-' }}</td>
+            <td class="description-cell">{{ lead[8] if lead[8] else '-' }}</td>
+            <td>
+              <span class="status-badge {% if lead[9] == 1 %}status-active{% else %}status-inactive{% endif %}">
+                {% if lead[9] == 1 %}Active{% else %}Inactive{% endif %}
+              </span>
+            </td>
+            <td>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <form method="POST" action="{{ url_for('toggle_lead_status', lead_id=lead[0], campaign_id=campaign_id) }}" style="display:inline;">
+                  <button type="submit" class="btn {% if lead[9] == 1 %}btn-toggle{% else %}btn-activate{% endif %}" 
+                          onclick="return confirm('Are you sure you want to {% if lead[9] == 1 %}deactivate{% else %}activate{% endif %} this profile?')">
+                    {% if lead[9] == 1 %}❌ Deactivate{% else %}✅ Activate{% endif %}
+                  </button>
+                </form>
+                <form method="POST" action="{{ url_for('delete_lead', lead_id=lead[0], campaign_id=campaign_id) }}" style="display:inline;">
+                  <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure you want to delete this lead?')">🗑️ Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      
+      <div id="noResults" class="no-results" style="display: none;">
+        <h3>No leads found</h3>
+        <p>Try adjusting your search criteria</p>
+      </div>
+    </div>
+    
+    <div class="pagination" id="pagination">
+      <button id="prevBtn" onclick="changePage(-1)">← Previous</button>
+      <span id="pageInfo">Page 1 of 1</span>
+      <button id="nextBtn" onclick="changePage(1)">Next →</button>
+    </div>
+    
+    <div class="actions-bar">
+      <a href="{{ url_for('add_lead', campaign_id=campaign_id) }}" class="btn btn-primary">➕ Add New Profile</a>
+      <button class="btn btn-delete" onclick="deleteSelected()" id="deleteSelectedBtn" disabled>🗑️ Delete Selected</button>
+      <button class="btn btn-activate" onclick="bulkToggleSelected(1)" id="activateSelectedBtn" disabled>✅ Activate Selected</button>
+      <button class="btn btn-warning" onclick="bulkToggleSelected(0)" id="deactivateSelectedBtn" disabled>❌ Deactivate Selected</button>
+      <form method="POST" action="{{ url_for('approve_campaign', campaign_id=campaign_id) }}" style="display:inline;">
+        <button type="submit" class="btn btn-success">✅ Approve and Continue</button>
+      </form>
+    </div>
+  </div>
 
-  <form method="POST" action="{{ url_for('approve_campaign', campaign_id=campaign_id) }}">
-    <button type="submit">✅ Approve and Continue</button>
-  </form>
+  <script>
+    let currentPage = 1;
+    const recordsPerPage = 15;
+    let filteredRows = [];
+    let allRows = [];
 
-  <br><a href="{{ url_for('campaigns') }}">⬅️ Back to Campaigns</a>
+    function initializeTable() {
+      const tableBody = document.getElementById('tableBody');
+      allRows = Array.from(tableBody.getElementsByTagName('tr'));
+      filteredRows = [...allRows];
+      updateDisplay();
+      updateSelectedCount();
+      updateStatusCounts();
+    }
+
+    function searchAndFilter() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+      const tableBody = document.getElementById('tableBody');
+      const rows = Array.from(tableBody.getElementsByTagName('tr'));
+      
+      filteredRows = rows.filter(row => {
+        const text = row.textContent.toLowerCase();
+        const searchMatch = text.includes(searchTerm);
+        
+        let statusMatch = true;
+        if (statusFilter) {
+          const rowStatus = row.getAttribute('data-status');
+          statusMatch = rowStatus === statusFilter;
+        }
+        
+        return searchMatch && statusMatch;
+      });
+      
+      currentPage = 1;
+      updateDisplay();
+    }
+
+    function updateDisplay() {
+      const startIndex = (currentPage - 1) * recordsPerPage;
+      const endIndex = startIndex + recordsPerPage;
+      const totalPages = Math.ceil(filteredRows.length / recordsPerPage);
+      
+      // Hide all rows
+      allRows.forEach(row => row.style.display = 'none');
+      
+      // Show current page rows
+      const currentRows = filteredRows.slice(startIndex, endIndex);
+      currentRows.forEach(row => row.style.display = '');
+      
+      // Update pagination
+      document.getElementById('prevBtn').disabled = currentPage === 1;
+      document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+      document.getElementById('pageInfo').textContent = totalPages > 0 ? `Page ${currentPage} of ${totalPages}` : 'Page 0 of 0';
+      
+      // Update records count
+      document.getElementById('recordsCount').textContent = filteredRows.length;
+      
+      // Show/hide no results message
+      const noResults = document.getElementById('noResults');
+      const table = document.getElementById('leadsTable');
+      if (filteredRows.length === 0) {
+        noResults.style.display = 'block';
+        table.style.display = 'none';
+      } else {
+        noResults.style.display = 'none';
+        table.style.display = 'table';
+      }
+      
+      // Update select all checkbox
+      updateSelectAllCheckbox();
+    }
+
+    function updateStatusCounts() {
+      const activeCount = allRows.filter(row => row.getAttribute('data-status') === 'active').length;
+      const inactiveCount = allRows.filter(row => row.getAttribute('data-status') === 'inactive').length;
+      
+      document.getElementById('activeCount').textContent = activeCount;
+      document.getElementById('inactiveCount').textContent = inactiveCount;
+    }
+
+    function changePage(direction) {
+      const totalPages = Math.ceil(filteredRows.length / recordsPerPage);
+      const newPage = currentPage + direction;
+      
+      if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        updateDisplay();
+      }
+    }
+
+    function clearFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('statusFilter').value = '';
+      filteredRows = [...allRows];
+      currentPage = 1;
+      updateDisplay();
+    }
+
+    function toggleSelectAll() {
+      const selectAll = document.getElementById('selectAll');
+      const checkboxes = document.querySelectorAll('.lead-checkbox');
+      const visibleCheckboxes = Array.from(checkboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+      
+      visibleCheckboxes.forEach(cb => {
+        cb.checked = selectAll.checked;
+      });
+      
+      updateSelectedCount();
+    }
+
+    function updateSelectAllCheckbox() {
+      const selectAll = document.getElementById('selectAll');
+      const checkboxes = document.querySelectorAll('.lead-checkbox');
+      const visibleCheckboxes = Array.from(checkboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+      const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+      
+      if (visibleCheckboxes.length === 0) {
+        selectAll.indeterminate = false;
+        selectAll.checked = false;
+      } else if (checkedVisible.length === visibleCheckboxes.length) {
+        selectAll.indeterminate = false;
+        selectAll.checked = true;
+      } else if (checkedVisible.length > 0) {
+        selectAll.indeterminate = true;
+        selectAll.checked = false;
+      } else {
+        selectAll.indeterminate = false;
+        selectAll.checked = false;
+      }
+    }
+
+    function updateSelectedCount() {
+      const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
+      const count = checkboxes.length;
+      document.getElementById('selectedCount').textContent = count;
+      
+      // Enable/disable bulk action buttons
+      document.getElementById('deleteSelectedBtn').disabled = count === 0;
+      document.getElementById('activateSelectedBtn').disabled = count === 0;
+      document.getElementById('deactivateSelectedBtn').disabled = count === 0;
+    }
+
+    function deleteSelected() {
+      const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
+      const leadIds = Array.from(checkboxes).map(cb => cb.dataset.leadId);
+      
+      if (leadIds.length === 0) {
+        alert('Please select leads to delete');
+        return;
+      }
+      
+      if (confirm(`Are you sure you want to delete ${leadIds.length} selected lead(s)?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ url_for("bulk_delete_leads", campaign_id=campaign_id) }}';
+        form.style.display = 'none';
+        
+        leadIds.forEach(id => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'lead_ids';
+          input.value = id;
+          form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+      }
+    }
+
+    function bulkToggleSelected(status) {
+      const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
+      const leadIds = Array.from(checkboxes).map(cb => cb.dataset.leadId);
+      
+      if (leadIds.length === 0) {
+        alert('Please select leads to modify');
+        return;
+      }
+      
+      const action = status === 1 ? 'activate' : 'deactivate';
+      if (confirm(`Are you sure you want to ${action} ${leadIds.length} selected lead(s)?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `{{ url_for("bulk_toggle_leads", campaign_id=campaign_id, status=0) }}`.replace('0', status);
+        form.style.display = 'none';
+        
+        leadIds.forEach(id => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'lead_ids';
+          input.value = id;
+          form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+      }
+    }
+
+    // Event listeners
+    document.getElementById('searchInput').addEventListener('input', searchAndFilter);
+    document.getElementById('statusFilter').addEventListener('change', searchAndFilter);
+    
+    document.addEventListener('change', function(e) {
+      if (e.target.classList.contains('lead-checkbox')) {
+        updateSelectedCount();
+        updateSelectAllCheckbox();
+      }
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initializeTable);
+  </script>
 </body>
 </html>
