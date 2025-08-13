@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Merge Campaigns</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    h2 {
+      color: #2c3e50;
+      margin: 0;
+      font-size: 2.2em;
+      font-weight: 600;
+    }
+
+    .back-link {
+      color: #667eea;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      padding: 10px 20px;
+      border: 2px solid #667eea;
+      border-radius: 25px;
+      transition: all 0.3s;
+    }
+    
+    .back-link:hover {
+      background: #667eea;
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    /* Merge Section Styles */
+    .merge-section {
+      background: linear-gradient(135deg, #e8f5e8, #f0f8ff);
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      border: 2px solid #c3e6cb;
+    }
+
+    .merge-title {
+      font-size: 1.3em;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #155724;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .campaign-selector {
+      margin-bottom: 25px;
+    }
+
+    .campaign-selector h3 {
+      color: #155724;
+      font-size: 1.1em;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dropdown-container {
+      position: relative;
+      margin-bottom: 15px;
+    }
+
+    .dropdown-button {
+      width: 100%;
+      padding: 12px 16px;
+      background: white;
+      border: 2px solid #c3e6cb;
+      border-radius: 8px;
+      font-size: 15px;
+      color: #495057;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s;
+      min-height: 50px;
+    }
+
+    .dropdown-button:hover {
+      border-color: #28a745;
+      background: #f8f9fa;
+    }
+
+    .dropdown-button.active {
+      border-color: #28a745;
+      background: #f8f9fa;
+    }
+
+    .dropdown-arrow {
+      transition: transform 0.3s;
+    }
+
+    .dropdown-button.active .dropdown-arrow {
+      transform: rotate(180deg);
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 2px solid #c3e6cb;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      max-height: 250px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f3f4;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background-color 0.2s;
+    }
+
+    .dropdown-item:hover {
+      background-color: #f8f9fa;
+    }
+
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .campaign-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .campaign-name {
+      font-weight: 500;
+      color: #2c3e50;
+    }
+
+    .campaign-details {
+      font-size: 12px;
+      color: #6c757d;
+    }
+
+    .campaign-checkbox {
+      margin-left: 10px;
+      transform: scale(1.2);
+    }
+
+    .selected-campaigns {
+      margin-top: 20px;
+    }
+
+    .selected-campaigns h4 {
+      color: #155724;
+      margin-bottom: 15px;
+      font-size: 1em;
+    }
+
+    .selected-list {
+      background: white;
+      border: 2px solid #c3e6cb;
+      border-radius: 8px;
+      min-height: 80px;
+      padding: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .selected-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #e8f5e8;
+      border: 1px solid #c3e6cb;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      last-child: 0;
+    }
+
+    .selected-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .remove-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .remove-btn:hover {
+      background: #c82333;
+    }
+
+    .empty-selection {
+      color: #6c757d;
+      font-style: italic;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .merge-controls {
+      display: flex;
+      gap: 15px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .merge-group {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .merge-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #155724;
+      font-size: 14px;
+    }
+
+    .merge-group input[type="text"] {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #c3e6cb;
+      border-radius: 8px;
+      font-size: 15px;
+      background: white;
+      box-sizing: border-box;
+      transition: border-color 0.3s;
+    }
+
+    .merge-group input[type="text"]:focus {
+      outline: none;
+      border-color: #28a745;
+    }
+
+    .merge-btn {
+      background: linear-gradient(135deg, #28a745, #20c997);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 25px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .merge-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #218838, #1da1a1);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    .merge-btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .merge-preview {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .merge-preview.show {
+      display: block;
+    }
+
+    .preview-title {
+      font-weight: 600;
+      color: #856404;
+      margin-bottom: 10px;
+    }
+
+    .preview-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 10px;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid #ffeaa7;
+    }
+
+    .stat-number {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #28a745;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6c757d;
+      margin-top: 5px;
+    }
+
+    .merge-info {
+      background: #e7f3ff;
+      border: 1px solid #b3d9ff;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #004085;
+    }
+
+    .merge-info h4 {
+      margin: 0 0 10px 0;
+      font-size: 15px;
+      color: #004085;
+    }
+
+    .merge-info p {
+      margin: 5px 0;
+      line-height: 1.5;
+    }
+
+    .campaign-count {
+      font-size: 12px;
+      color: #6c757d;
+      font-weight: normal;
+      margin-left: 10px;
+    }
+
+    .selected-count {
+      font-weight: 600;
+      color: #28a745;
+    }
+
+    .flash-messages {
+      margin-bottom: 20px;
+    }
+    
+    .flash-message {
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    
+    .flash-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .flash-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .status-badge {
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .status-approved {
+      background: linear-gradient(135deg, #00b894, #00a085);
+      color: white;
+    }
+    
+    .status-pending {
+      background: linear-gradient(135deg, #fdcb6e, #e17055);
+      color: white;
+    }
+    
+    .status-draft {
+      background: linear-gradient(135deg, #fd79a8, #e84393);
+      color: white;
+    }
+
+    /* Existing campaigns table styles */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      margin-bottom: 25px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    th {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 18px 15px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    td {
+      padding: 15px;
+      border-bottom: 1px solid #f8f9fa;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    
+    tr:hover {
+      background-color: #e3f2fd;
+      transform: scale(1.01);
+      transition: all 0.2s;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.3s;
+    }
+    
+    .btn-view {
+      background: linear-gradient(135deg, #74b9ff, #0984e3);
+      color: white;
+    }
+    
+    .btn-delete {
+      background: linear-gradient(135deg, #ff7675, #e17055);
+      color: white;
+    }
+    
+    .btn-send {
+      background: linear-gradient(135deg, #00b894, #00a085);
+      color: white;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .no-results {
+      text-align: center;
+      padding: 60px;
+      color: #6c757d;
+    }
+    
+    .no-results h3 {
+      color: #495057;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .merge-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .merge-group {
+        min-width: auto;
+      }
+      
+      .preview-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="header">
+      <h2>🔄 Merge Campaigns</h2>
+      <a href="{{ url_for('campaigns') }}" class="back-link">⬅️ Back to Campaigns</a>
+    </div>
+
+    <!-- Merge Campaigns Section -->
+    <div class="merge-section">
+      <div class="merge-title">
+        <span>🔄</span>
+        Select Campaigns to Merge
+      </div>
+      
+      <div class="campaign-selector">
+        <h3><span>📋</span> Available Campaigns</h3>
+        
+        <div class="dropdown-container">
+          <div class="dropdown-button" id="campaignDropdown" onclick="toggleDropdown()">
+            <span>Select campaigns to merge...</span>
+            <span class="dropdown-arrow">▼</span>
+          </div>
+          
+          <div class="dropdown-menu" id="dropdownMenu">
+            <!-- Campaigns will be loaded here -->
+          </div>
+        </div>
+        
+        <div class="selected-campaigns">
+          <h4>Selected Campaigns (<span id="selectedCount" class="selected-count">0</span>)</h4>
+          <div class="selected-list" id="selectedList">
+            <div class="empty-selection">No campaigns selected</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Merge Preview -->
+      <div class="merge-preview" id="mergePreview">
+        <div class="preview-title">📊 Merge Preview</div>
+        <div class="preview-stats" id="previewStats">
+          <!-- Stats will be loaded here -->
+        </div>
+      </div>
+      
+      <form method="POST" action="{{ url_for('merge_campaigns') }}" class="merge-controls" id="mergeForm">
+        <div class="merge-group">
+          <label for="merged_campaign_name">New Campaign Name</label>
+          <input type="text" id="merged_campaign_name" name="merged_campaign_name" placeholder="Enter merged campaign name..." required>
+        </div>
+        
+        <button type="submit" class="merge-btn" id="mergeBtn" disabled>
+          <span>🔄</span>
+          Merge Selected Campaigns
+        </button>
+      </form>
+
+      <!-- <div class="merge-info">
+        <h4>📋 About Campaign Merging:</h4>
+        <p>• Select 2 or more campaigns from the dropdown above</p>
+        <p>• All profiles from selected campaigns will be combined into one new campaign</p>
+        <p>• <strong>Duplicate profiles are automatically removed</strong> during the merge process</p>
+        <p>• Original campaigns will be deleted after successful merge</p>
+        <p>• The new merged campaign will start with 'pending' status</p>
+        <p>• You can see a preview of the merge statistics before confirming</p>
+      </div>
+    </div> -->
+    
+    <!-- Existing Merged Campaigns Table -->
+    <div style="margin-top: 40px;">
+      <h3 style="color: #2c3e50; margin-bottom: 20px;">📁 Previously Merged Campaigns <span class="campaign-count">({{ campaigns|length }} campaigns)</span></h3>
+      
+      {% if campaigns %}
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Campaign Name</th>
+              <th>Status</th>
+              <th>Profile Count</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in campaigns %}
+            <tr>
+              <td><strong>#{{ c[0] }}</strong></td>
+              <td>{{ c[1] }}</td>
+              <td>
+                <span class="status-badge 
+                  {% if c[2] == 'approved' %}status-approved
+                  {% elif c[2] == 'pending' %}status-pending
+                  {% else %}status-draft{% endif %}">{{ c[2] }}</span>
+              </td>
+              <td><strong>{{ c[3] if c[3] else 0 }}</strong></td>
+              <td>
+                <div class="actions">
+                  <a href="{{ url_for('campaign_detail', campaign_id=c[0]) }}" class="btn btn-view">👥 View Profiles</a>
+                  <form method="POST" action="{{ url_for('delete_campaign', campaign_id=c[0]) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-delete" onclick="return confirm('⚠️ Are you sure you want to delete this campaign and all its profiles?')">🗑️ Delete</button>
+                  </form>
+                  {% if c[2] == 'approved' %}
+                  <form method="POST" action="{{ url_for('send_to_n8n', campaign_id=c[0]) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-send" onclick="return confirm('Send approved campaign?')">🚀 Process</button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="no-results">
+        <h3>No merged campaigns yet</h3>
+        <p>Use the merge tool above to create your first merged campaign</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    let selectedCampaigns = new Map();
+    let allCampaigns = [];
+    let dropdownOpen = false;
+
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+      loadCampaigns();
+      updateSelectedDisplay();
+    });
+
+    // Load all available campaigns
+    async function loadCampaigns() {
+      try {
+        const response = await fetch('/api/available_campaigns');
+        const campaigns = await response.json();
+        allCampaigns = campaigns;
+        renderDropdownItems();
+      } catch (error) {
+        console.error('Error loading campaigns:', error);
+      }
+    }
+
+    // Render dropdown items
+    function renderDropdownItems() {
+      const dropdownMenu = document.getElementById('dropdownMenu');
+      
+      if (allCampaigns.length === 0) {
+        dropdownMenu.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">No campaigns available for merging</div>';
+        return;
+      }
+      
+      dropdownMenu.innerHTML = allCampaigns.map(campaign => `
+        <div class="dropdown-item" onclick="toggleCampaignSelection(${campaign.id})">
+          <div class="campaign-info">
+            <div class="campaign-name">${campaign.name}</div>
+            <div class="campaign-details">
+              ID: ${campaign.id} • Status: ${campaign.status} • Profiles: ${campaign.profile_count}
+            </div>
+          </div>
+          <input type="checkbox" class="campaign-checkbox" id="campaign_${campaign.id}" ${selectedCampaigns.has(campaign.id) ? 'checked' : ''}>
+        </div>
+      `).join('');
+    }
+
+    // Toggle dropdown
+    function toggleDropdown() {
+      dropdownOpen = !dropdownOpen;
+      const dropdown = document.getElementById('campaignDropdown');
+      const menu = document.getElementById('dropdownMenu');
+      
+      if (dropdownOpen) {
+        dropdown.classList.add('active');
+        menu.classList.add('show');
+      } else {
+        dropdown.classList.remove('active');
+        menu.classList.remove('show');
+      }
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const dropdownContainer = document.querySelector('.dropdown-container');
+      if (!dropdownContainer.contains(event.target) && dropdownOpen) {
+        toggleDropdown();
+      }
+    });
+
+    // Toggle campaign selection
+    function toggleCampaignSelection(campaignId) {
+      const campaign = allCampaigns.find(c => c.id === campaignId);
+      if (!campaign) return;
+      
+      if (selectedCampaigns.has(campaignId)) {
+        selectedCampaigns.delete(campaignId);
+      } else {
+        selectedCampaigns.set(campaignId, campaign);
+      }
+      
+      updateSelectedDisplay();
+      updateMergePreview();
+      renderDropdownItems(); // Update checkboxes
+    }
+
+    // Remove campaign from selection
+    function removeCampaign(campaignId) {
+      selectedCampaigns.delete(campaignId);
+      updateSelectedDisplay();
+      updateMergePreview();
+      renderDropdownItems();
+    }
+
+    // Update selected campaigns display
+    function updateSelectedDisplay() {
+      const selectedList = document.getElementById('selectedList');
+      const selectedCount = document.getElementById('selectedCount');
+      const mergeBtn = document.getElementById('mergeBtn');
+      
+      selectedCount.textContent = selectedCampaigns.size;
+      
+      if (selectedCampaigns.size === 0) {
+        selectedList.innerHTML = '<div class="empty-selection">No campaigns selected</div>';
+        mergeBtn.disabled = true;
+      } else {
+        selectedList.innerHTML = Array.from(selectedCampaigns.values()).map(campaign => `
+          <div class="selected-item">
+            <div class="campaign-info">
+              <div class="campaign-name">${campaign.name}</div>
+              <div class="campaign-details">ID: ${campaign.id} • Profiles: ${campaign.profile_count}</div>
+            </div>
+            <button class="remove-btn" onclick="removeCampaign(${campaign.id})" type="button">✕</button>
+          </div>
+        `).join('');
+        
+        mergeBtn.disabled = selectedCampaigns.size < 2;
+      }
+    }
+
+    // Update merge preview
+    async function updateMergePreview() {
+      const preview = document.getElementById('mergePreview');
+      const previewStats = document.getElementById('previewStats');
+      
+      if (selectedCampaigns.size < 2) {
+        preview.classList.remove('show');
+        return;
+      }
+      
+      try {
+        const campaignIds = Array.from(selectedCampaigns.keys());
+        const response = await fetch('/api/merge_preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaign_ids: campaignIds })
+        });
+        
+        const data = await response.json();
+        
+        previewStats.innerHTML = `
+          <div class="stat-item">
+            <div class="stat-number">${data.total_profiles}</div>
+            <div class="stat-label">Total Profiles</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">${data.unique_profiles}</div>
+            <div class="stat-label">Unique Profiles</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">${data.duplicate_profiles}</div>
+            <div class="stat-label">Duplicates (Will be removed)</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">${selectedCampaigns.size}</div>
+            <div class="stat-label">Campaigns Selected</div>
+          </div>
+        `;
+        
+        preview.classList.add('show');
+      } catch (error) {
+        console.error('Error loading preview:', error);
+        preview.classList.remove('show');
+      }
+    }
+
+    // Handle form submission
+    document.getElementById('mergeForm').addEventListener('submit', function(e) {
+      const mergedName = document.getElementById('merged_campaign_name').value.trim();
+      
+      if (!mergedName) {
+        alert('Please enter a name for the merged campaign');
+        e.preventDefault();
+        return;
+      }
+      
+      if (selectedCampaigns.size < 2) {
+        alert('Please select at least 2 campaigns to merge');
+        e.preventDefault();
+        return;
+      }
+      
+      // Add selected campaign IDs to form
+      const existingInputs = this.querySelectorAll('input[name="campaign_ids[]"]');
+      existingInputs.forEach(input => input.remove());
+      
+      selectedCampaigns.forEach((campaign, id) => {
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'campaign_ids[]';
+        hiddenInput.value = id;
+        this.appendChild(hiddenInput);
+      });
+      
+      if (!confirm(`Are you sure you want to merge ${selectedCampaigns.size} campaigns into "${mergedName}"?\n\nThis action cannot be undone. Original campaigns will be deleted.`)) {
+        e.preventDefault();
+        return;
+      }
+      
+      // Show loading state
+      const btn = document.getElementById('mergeBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> Merging Campaigns...';
+    });
+  </script>
+</body>
+</html>

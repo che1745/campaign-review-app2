@@ -35,6 +35,50 @@
       font-size: 2.2em;
       font-weight: 600;
     }
+
+    /* Tab Styles */
+    .tabs-container {
+      margin-bottom: 30px;
+    }
+
+    .tabs-nav {
+      display: flex;
+      border-bottom: 3px solid #e9ecef;
+      margin-bottom: 25px;
+    }
+
+    .tab-button {
+      padding: 15px 30px;
+      background: none;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      color: #6c757d;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+      margin-right: 20px;
+      position: relative;
+    }
+
+    .tab-button:hover {
+      color: #667eea;
+      background: rgba(102, 126, 234, 0.05);
+    }
+
+    .tab-button.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      background: rgba(102, 126, 234, 0.1);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
     
     .upload-section {
       background: #f8f9fa;
@@ -264,6 +308,15 @@
       background: linear-gradient(135deg, #00b894, #00a085);
       color: white;
     }
+
+    .btn-merge {
+      background: linear-gradient(135deg, #28a745, #20c997);
+      color: white;
+      padding: 12px 25px;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
     
     .btn:hover {
       transform: translateY(-2px);
@@ -368,25 +421,12 @@
       color: #721c24;
       border: 1px solid #f5c6cb;
     }
-    
-    .csv-help {
-      background: #e9ecef;
-      border-radius: 6px;
-      padding: 12px;
-      margin-top: 15px;
+
+    .campaign-count {
       font-size: 12px;
       color: #6c757d;
-    }
-    
-    .csv-help h4 {
-      margin: 0 0 8px 0;
-      color: #495057;
-      font-size: 13px;
-    }
-    
-    .csv-help p {
-      margin: 3px 0;
-      line-height: 1.4;
+      font-weight: normal;
+      margin-left: 10px;
     }
   </style>
 </head>
@@ -404,98 +444,127 @@
     {% endwith %}
 
     <div class="header">
-      <h2>📁 Campaign Management</h2>
+      <h2>📁 Campaign Management <span class="campaign-count">({{ campaigns|length }} campaigns)</span></h2>
     </div>
     
-    <!-- CSV Upload Section -->
-    <div class="upload-section">
-      <div class="upload-title">
-        <span>📤</span>
-        Upload New Campaign
+    <!-- Tabs Navigation -->
+    <div class="tabs-container">
+      <div class="tabs-nav">
+        <button class="tab-button active" onclick="switchTab('campaigns')">
+          📋 Manage Campaigns
+        </button>
+        <button class="tab-button" onclick="switchTab('merge')">
+          🔄 Merge Campaigns
+        </button>
       </div>
-      
-      <form method="POST" action="{{ url_for('upload_csv') }}" enctype="multipart/form-data" class="upload-form" id="uploadForm">
-        <div class="form-group">
-          <label for="campaign_name">Campaign Name</label>
-          <input type="text" id="campaign_name" name="campaign_name" placeholder="Enter campaign name..." required>
+
+      <!-- Campaigns Tab Content -->
+      <div id="campaigns-tab" class="tab-content active">
+        <!-- CSV Upload Section -->
+        <div class="upload-section">
+          <div class="upload-title">
+            <span>📤</span>
+            Upload New Campaign
+          </div>
+          
+          <form method="POST" action="{{ url_for('upload_csv') }}" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+            <div class="form-group">
+              <label for="campaign_name">Campaign Name</label>
+              <input type="text" id="campaign_name" name="campaign_name" placeholder="Enter campaign name..." required>
+            </div>
+            
+            <div class="form-group">
+              <label>CSV File</label>
+              <div class="file-input-wrapper" onclick="document.getElementById('csv_file').click()">
+                <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
+                <span class="file-input-text" id="fileText">Choose file...</span>
+              </div>
+            </div>
+            
+            <button type="submit" class="upload-btn" id="uploadBtn">
+              <span>📁</span>
+              Upload
+            </button>
+          </form>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="search-container">
+          <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search campaigns by name, status..." />
+          <button class="clear-btn" onclick="clearSearch()">Clear</button>
         </div>
         
-        <div class="form-group">
-          <label>CSV File</label>
-          <div class="file-input-wrapper" onclick="document.getElementById('csv_file').click()">
-            <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
-            <span class="file-input-text" id="fileText">Choose file...</span>
+        <div class="records-info">
+          Showing <span id="recordsCount">0</span> campaigns
+        </div>
+        
+        <!-- Campaigns Table -->
+        <div class="table-container">
+          <table id="campaignsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Campaign Name</th>
+                <th>Status</th>
+                <th>Profile Count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              {% for c in campaigns %}
+              <tr>
+                <td><strong>#{{ c[0] }}</strong></td>
+                <td>{{ c[1] }}</td>
+                <td>
+                  <span class="status-badge 
+                    {% if c[2] == 'approved' %}status-approved
+                    {% elif c[2] == 'pending' %}status-pending
+                    {% else %}status-draft{% endif %}">{{ c[2] }}</span>
+                </td>
+                <td><strong>{{ c[3] if c[3] else 0 }}</strong></td>
+                <td>
+                  <div class="actions">
+                    <a href="{{ url_for('campaign_detail', campaign_id=c[0]) }}" class="btn btn-view">👥 View Profiles</a>
+                    <form method="POST" action="{{ url_for('delete_campaign', campaign_id=c[0]) }}" style="display:inline;">
+                      <button type="submit" class="btn btn-delete" onclick="return confirm('⚠️ Are you sure you want to delete this campaign and all its profiles?')">🗑️ Delete</button>
+                    </form>
+                    {% if c[2] == 'approved' %}
+                    <form method="POST" action="{{ url_for('send_to_n8n', campaign_id=c[0]) }}" style="display:inline;">
+                      <button type="submit" class="btn btn-send" onclick="return confirm('Send approved campaign?')">🚀 Process</button>
+                    </form>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          
+          <div id="noResults" class="no-results" style="display: none;">
+            <h3>No campaigns found</h3>
+            <p>Try adjusting your search criteria or upload a new campaign</p>
           </div>
         </div>
         
-        <button type="submit" class="upload-btn" id="uploadBtn">
-          <span>📁</span>
-          Upload
-        </button>
-      </form>
-    </div>
-    
-    <!-- Search and Filter -->
-    <div class="search-container">
-      <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search campaigns by name, status..." />
-      <button class="clear-btn" onclick="clearSearch()">Clear</button>
-    </div>
-    
-    <div class="records-info">
-      Showing <span id="recordsCount">0</span> campaigns
-    </div>
-    
-    <!-- Campaigns Table -->
-    <div class="table-container">
-      <table id="campaignsTable">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Campaign Name</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          {% for c in campaigns %}
-          <tr>
-            <td><strong>#{{ c[0] }}</strong></td>
-            <td>{{ c[1] }}</td>
-            <td>
-              <span class="status-badge 
-                {% if c[2] == 'approved' %}status-approved
-                {% elif c[2] == 'pending' %}status-pending
-                {% else %}status-draft{% endif %}">{{ c[2] }}</span>
-            </td>
-            <td>
-              <div class="actions">
-                <a href="{{ url_for('campaign_detail', campaign_id=c[0]) }}" class="btn btn-view">👥 View Profiles</a>
-                <form method="POST" action="{{ url_for('delete_campaign', campaign_id=c[0]) }}" style="display:inline;">
-                  <button type="submit" class="btn btn-delete" onclick="return confirm('⚠️ Are you sure you want to delete this campaign and all its profiles?')">🗑️ Delete</button>
-                </form>
-                {% if c[2] == 'approved' %}
-                <form method="POST" action="{{ url_for('send_to_n8n', campaign_id=c[0]) }}" style="display:inline;">
-                  <button type="submit" class="btn btn-send" onclick="return confirm('Send approved campaign?')">🚀 Process</button>
-                </form>
-                {% endif %}
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      
-      <div id="noResults" class="no-results" style="display: none;">
-        <h3>No campaigns found</h3>
-        <p>Try adjusting your search criteria or upload a new campaign</p>
+        <!-- Pagination -->
+        <div class="pagination" id="pagination">
+          <button id="prevBtn" onclick="changePage(-1)">← Previous</button>
+          <span id="pageInfo">Page 1 of 1</span>
+          <button id="nextBtn" onclick="changePage(1)">Next →</button>
+        </div>
       </div>
-    </div>
-    
-    <!-- Pagination -->
-    <div class="pagination" id="pagination">
-      <button id="prevBtn" onclick="changePage(-1)">← Previous</button>
-      <span id="pageInfo">Page 1 of 1</span>
-      <button id="nextBtn" onclick="changePage(1)">Next →</button>
+
+      <!-- Merge Tab Content -->
+      <div id="merge-tab" class="tab-content">
+        <div style="text-align: center; padding: 40px;">
+          <a href="{{ url_for('merge_campaigns_page') }}" class="btn btn-merge">
+            🔄 Go to Merge Campaigns Page
+          </a>
+          <p style="margin-top: 20px; color: #6c757d;">
+            Select and merge multiple campaigns into one unified campaign
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -504,6 +573,24 @@
     const recordsPerPage = 10;
     let filteredRows = [];
     let allRows = [];
+
+    function switchTab(tabName) {
+      // Hide all tab contents
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // Remove active class from all tab buttons
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+      });
+      
+      // Show selected tab content
+      document.getElementById(tabName + '-tab').classList.add('active');
+      
+      // Add active class to clicked button
+      event.target.classList.add('active');
+    }
 
     function initializeTable() {
       const tableBody = document.getElementById('tableBody');
@@ -581,7 +668,7 @@
       document.getElementById('fileText').textContent = fileName;
     });
 
-    // Form validation
+    // Form validation and submission
     document.getElementById('uploadForm').addEventListener('submit', function(e) {
       const campaignName = document.getElementById('campaign_name').value.trim();
       const csvFile = document.getElementById('csv_file').files[0];

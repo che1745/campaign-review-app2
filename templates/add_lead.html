@@ -29,12 +29,12 @@
     }
     
     .form-group {
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
     
     label {
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       font-weight: 600;
       color: #495057;
       font-size: 14px;
@@ -46,10 +46,10 @@
     select,
     textarea {
       width: 100%;
-      padding: 15px;
+      padding: 10px 12px;
       border: 2px solid #e9ecef;
-      border-radius: 10px;
-      font-size: 16px;
+      border-radius: 8px;
+      font-size: 14px;
       box-sizing: border-box;
       transition: all 0.3s;
       background: #f8f9fa;
@@ -62,19 +62,19 @@
       border-color: #667eea;
       background: white;
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      transform: translateY(-2px);
+      transform: translateY(-1px);
     }
     
     textarea {
       resize: vertical;
-      min-height: 120px;
+      min-height: 80px;
       font-family: inherit;
       line-height: 1.5;
     }
     
     .form-row {
       display: flex;
-      gap: 20px;
+      gap: 15px;
     }
     
     .form-row .form-group {
@@ -87,9 +87,9 @@
     
     .score-slider {
       width: 100%;
-      margin: 15px 0;
-      height: 8px;
-      border-radius: 5px;
+      margin: 10px 0;
+      height: 6px;
+      border-radius: 3px;
       background: #e9ecef;
       outline: none;
       -webkit-appearance: none;
@@ -98,8 +98,8 @@
     .score-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       background: #667eea;
       cursor: pointer;
@@ -113,8 +113,8 @@
     }
     
     .score-slider::-moz-range-thumb {
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       background: #667eea;
       cursor: pointer;
@@ -124,27 +124,27 @@
     
     .score-display {
       text-align: center;
-      font-size: 28px;
+      font-size: 22px;
       font-weight: bold;
       color: #667eea;
-      margin: 15px 0;
-      padding: 10px;
+      margin: 10px 0;
+      padding: 8px;
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(102, 126, 234, 0.05));
-      border-radius: 10px;
+      border-radius: 8px;
     }
     
     .btn {
-      padding: 15px 30px;
+      padding: 12px 25px;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      margin: 8px;
+      gap: 6px;
+      margin: 6px;
       transition: all 0.3s;
     }
     
@@ -155,7 +155,7 @@
     
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(116, 185, 255, 0.3);
+      box-shadow: 0 6px 20px rgba(116, 185, 255, 0.3);
     }
     
     .btn-secondary {
@@ -165,27 +165,27 @@
     
     .btn-secondary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+      box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
     }
     
     .button-group {
       text-align: center;
-      margin-top: 40px;
-      padding-top: 30px;
+      margin-top: 30px;
+      padding-top: 25px;
       border-top: 2px solid #f0f0f0;
     }
     
     .back-link {
       color: #667eea;
       text-decoration: none;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 500;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 15px;
+      gap: 6px;
+      padding: 8px 12px;
       border: 2px solid #667eea;
-      border-radius: 25px;
+      border-radius: 20px;
       transition: all 0.3s;
     }
     
@@ -200,29 +200,29 @@
     }
     
     .form-help {
-      font-size: 12px;
+      font-size: 11px;
       color: #6c757d;
-      margin-top: 5px;
+      margin-top: 4px;
       font-style: italic;
     }
     
     .validation-error {
       color: #dc3545;
-      font-size: 14px;
-      margin-top: 5px;
+      font-size: 12px;
+      margin-top: 4px;
       display: none;
     }
     
     .score-badges {
       display: flex;
       justify-content: space-between;
-      margin-top: 15px;
-      font-size: 12px;
+      margin-top: 12px;
+      font-size: 11px;
     }
     
     .score-badge {
-      padding: 4px 10px;
-      border-radius: 15px;
+      padding: 3px 8px;
+      border-radius: 12px;
       font-weight: 500;
     }
     
@@ -244,10 +244,11 @@
     }
     
     .flash-message {
-      padding: 12px 20px;
-      border-radius: 8px;
-      margin-bottom: 10px;
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 8px;
       font-weight: 500;
+      font-size: 14px;
     }
     
     .flash-success {
@@ -324,10 +325,18 @@
         </div>
       </div>
       
-      <div class="form-group">
-        <label for="label">Label <span class="required">*</span></label>
-        <input type="text" id="label" name="label" placeholder="e.g.sustainable fashion,packaging innovation" required>
-        <div class="validation-error" id="label_error">label is required</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="label">Label <span class="required">*</span></label>
+          <input type="text" id="label" name="label" placeholder="e.g., sustainable fashion, packaging innovation" required>
+          <div class="validation-error" id="label_error">Label is required</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="source">Source</label>
+          <input type="text" id="source" name="source" placeholder="e.g., LinkedIn, Conference, Referral">
+          <div class="form-help">Source of this profile (optional)</div>
+        </div>
       </div>
       
       <div class="form-group">
@@ -347,7 +356,7 @@
       
       <div class="form-group">
         <label for="description">Description <span class="required">*</span></label>
-        <textarea id="description" name="description" rows="4" placeholder="Enter description, notes, or qualification details..." required></textarea>
+        <textarea id="description" name="description" rows="3" placeholder="Enter description, notes, or qualification details..." required></textarea>
         <div class="form-help">Provide details about the profile, their interests, qualification status, etc.</div>
         <div class="validation-error" id="description_error">Description is required</div>
       </div>
