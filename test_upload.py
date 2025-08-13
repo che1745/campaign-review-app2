@@ -6,6 +6,8 @@ import io
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
+import uuid
+import secrets
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Change this to a random secret key
@@ -89,6 +91,19 @@ def init_db():
             c.execute("ALTER TABLE campaigns ADD COLUMN is_merged INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass
+        # Add new column for unsubscribe status
+        try:
+            c.execute("ALTER TABLE leads ADD COLUMN unsubscribe_status TEXT DEFAULT 'subscribed'")
+            print("✅ Added unsubscribe_status column to leads table")
+        except sqlite3.OperationalError:
+            print("ℹ️ unsubscribe_status column already exists")
+            
+        # Add unique token column for unsubscribe links
+        try:
+            c.execute("ALTER TABLE leads ADD COLUMN unsubscribe_token TEXT")
+            print("✅ Added unsubscribe_token column to leads table")
+        except sqlite3.OperationalError:
+            print("ℹ️ unsubscribe_token column already exists")
             
         conn.commit()
 
@@ -593,6 +608,82 @@ def add_lead(campaign_id):
     return render_template("add_lead.html", campaign_id=campaign_id)
 
 # --- SEND TO N8N (ONLY ACTIVE LEADS) ---
+# Add this function to your test_upload.py
+
+def generate_email_body_with_unsubscribe(lead_data, base_url="http://localhost:5000"):
+    """
+    Generate email body with unsubscribe link
+    
+    Args:
+        lead_data: Dictionary containing lead information
+        base_url: Your application's base URL
+        
+    Returns:
+        String containing HTML email body with unsubscribe link
+    """
+    
+    first_name = lead_data.get('first_name', '')
+    last_name = lead_data.get('last_name', '')
+    email = lead_data.get('email', '')
+    company = lead_data.get('company', '')
+    unsubscribe_token = lead_data.get('unsubscribe_token', '')
+    
+    # Construct unsubscribe URL
+    unsubscribe_url = f"{base_url}/unsubscribe/{unsubscribe_token}"
+    
+    # Email template (you can customize this)
+    email_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: #667eea; color: white; padding: 20px; text-align: center; }}
+            .content {{ padding: 20px; background: #f9f9f9; }}
+            .footer {{ padding: 20px; font-size: 12px; color: #666; }}
+            .unsubscribe {{ margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; }}
+            .unsubscribe a {{ color: #856404; text-decoration: none; font-weight: bold; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>Hello {first_name} {last_name}!</h2>
+            </div>
+            
+            <div class="content">
+                <p>We hope this email finds you well.</p>
+                
+                <p>We're reaching out from <strong>{company}</strong> regarding our latest campaign.</p>
+                
+                <p>[Your main email content goes here]</p>
+                
+                <p>Best regards,<br>
+                Your Marketing Team</p>
+            </div>
+            
+            <div class="footer">
+                <div class="unsubscribe">
+                    <p><strong>Not interested?</strong></p>
+                    <p>If you no longer wish to receive emails from us, you can 
+                    <a href="{unsubscribe_url}">unsubscribe here</a>.</p>
+                    <p><small>This will remove you from all future email campaigns.</small></p>
+                </div>
+                
+                <hr>
+                <p>This email was sent to {email}</p>
+                <p>© 2024 Your Company Name. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return email_body.strip()
+
+# Modify your send_to_n8n function to include unsubscribe tokens
+# Modified send_to_n8n function - sends only unsubscribe URL instead of full email body
 @app.route('/send_to_n8n/<int:campaign_id>', methods=['POST'])
 def send_to_n8n(campaign_id):
     db = get_db()
@@ -605,64 +696,174 @@ def send_to_n8n(campaign_id):
         flash('Campaign is not approved', 'error')
         return redirect(url_for('campaigns'))
 
-    # 2. Fetch only ACTIVE leads in campaign
+    # 2. Fetch only ACTIVE and SUBSCRIBED leads in campaign
     cursor.execute("""
-        SELECT first_name, last_name, email, company, domain, score, label, description, source
-        FROM leads WHERE campaign_id = ? AND is_active = 1
+        SELECT id, first_name, last_name, email, company, domain, score, label, description, source, unsubscribe_token
+        FROM leads 
+        WHERE campaign_id = ? 
+        AND is_active = 1 
+        AND (unsubscribe_status IS NULL OR unsubscribe_status = 'subscribed')
     """, (campaign_id,))
     leads = cursor.fetchall()
 
     if not leads:
-        flash('No active profiles found in this campaign', 'error')
+        flash('No active, subscribed profiles found in this campaign', 'error')
         return redirect(url_for('campaigns'))
 
-    leads_data = [
-        {
-            "first_name": lead[0],
-            "last_name": lead[1],
-            "email": lead[2],
-            "company": lead[3],
-            "domain": lead[4],
-            "score": lead[5],
-            "label": lead[6],
-            "description": lead[7],
-            "source": lead[8],
-        } for lead in leads
-    ]
+    # 3. Prepare leads data with unsubscribe URLs
+    leads_data = []
+    base_url = request.url_root.rstrip('/')  # Get your app's base URL
+    leads_without_tokens = []
+    
+    for lead in leads:
+        lead_id = lead[0]
+        unsubscribe_token = lead[10]  # unsubscribe_token from query
+        
+        # If lead doesn't have unsubscribe token, generate one
+        if not unsubscribe_token:
+            unsubscribe_token = generate_unsubscribe_token()
+            # Update the database with new token
+            cursor.execute("UPDATE leads SET unsubscribe_token = ? WHERE id = ?", (unsubscribe_token, lead_id))
+            leads_without_tokens.append(lead_id)
+        
+        # Construct unsubscribe URL
+        unsubscribe_url = f"{base_url}/unsubscribe/{unsubscribe_token}"
+        
+        lead_dict = {
+            "lead_id": lead_id,
+            "first_name": lead[1],
+            "last_name": lead[2], 
+            "email": lead[3],
+            "company": lead[4],
+            "domain": lead[5],
+            "score": lead[6],
+            "label": lead[7],
+            "description": lead[8],
+            "source": lead[9],
+            "unsubscribe_url": unsubscribe_url,  # Only the URL, not full email body
+            "unsubscribe_token": unsubscribe_token
+        }
+        
+        leads_data.append(lead_dict)
+    
+    # Commit any token updates
+    if leads_without_tokens:
+        db.commit()
+        print(f"✅ Generated tokens for {len(leads_without_tokens)} leads")
 
+    # 4. Prepare payload for n8n
     payload = {
         "campaign_id": campaign_id,
+        "total_leads": len(leads_data),
         "leads": leads_data
     }
 
-    # 3. Send to n8n
-    #webhook_url = "https://frog-more-lizard.ngrok-free.app/webhook/f7ecb2fe-1f9c-4920-be0d-2cd6bbc93561" #active
-    webhook_url = "https://frog-more-lizard.ngrok-free.app/webhook-test/f7ecb2fe-1f9c-4920-be0d-2cd6bbc93561" #test
+    # 5. Send to n8n webhook
+    webhook_url = "https://frog-more-lizard.ngrok-free.app/webhook-test/f7ecb2fe-1f9c-4920-be0d-2cd6bbc93561"
     try:
         response = requests.post(webhook_url, json=payload)
         response.raise_for_status()
-        flash(f'Campaign processed successfully! ({len(leads_data)} active profiles sent)', 'success')
-        print(f"âœ… Sent {len(leads_data)} active leads to n8n successfully.")
+        flash(f'Campaign processed successfully! ({len(leads_data)} active, subscribed profiles sent to n8n)', 'success')
+        print(f"✅ Sent {len(leads_data)} leads with unsubscribe URLs to n8n successfully.")
+        
+        # Optional: Log the response from n8n
+        print(f"📨 n8n Response Status: {response.status_code}")
+        if response.text:
+            print(f"📨 n8n Response: {response.text}")
+            
     except requests.RequestException as e:
         flash(f'Failed to process campaign: {str(e)}', 'error')
-        print(f"âŒ Failed to send to n8n: {e}")
+        print(f"❌ Failed to send to n8n: {e}")
 
     return redirect(url_for('campaigns'))
+
+# Optional: Add a route to get just the unsubscribe URL for a specific lead
+@app.route('/api/lead/<int:lead_id>/unsubscribe_url')
+def get_lead_unsubscribe_url(lead_id):
+    """Get unsubscribe URL for a specific lead"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("SELECT unsubscribe_token FROM leads WHERE id = ?", (lead_id,))
+    result = cursor.fetchone()
+    
+    if not result:
+        return jsonify({"error": "Lead not found"}), 404
+    
+    token = result[0]
+    if not token:
+        # Generate token if it doesn't exist
+        token = generate_unsubscribe_token()
+        cursor.execute("UPDATE leads SET unsubscribe_token = ? WHERE id = ?", (token, lead_id))
+        db.commit()
+    
+    base_url = request.url_root.rstrip('/')
+    unsubscribe_url = f"{base_url}/unsubscribe/{token}"
+    
+    return jsonify({
+        "lead_id": lead_id,
+        "unsubscribe_url": unsubscribe_url,
+        "unsubscribe_token": token
+    })
+
+# Optional: Bulk get unsubscribe URLs for multiple leads
+@app.route('/api/campaign/<int:campaign_id>/unsubscribe_urls')
+def get_campaign_unsubscribe_urls(campaign_id):
+    """Get all unsubscribe URLs for leads in a campaign"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("""
+        SELECT id, email, first_name, last_name, unsubscribe_token
+        FROM leads 
+        WHERE campaign_id = ? 
+        AND is_active = 1 
+        AND (unsubscribe_status IS NULL OR unsubscribe_status = 'subscribed')
+    """, (campaign_id,))
+    
+    leads = cursor.fetchall()
+    base_url = request.url_root.rstrip('/')
+    
+    urls_data = []
+    for lead in leads:
+        lead_id, email, first_name, last_name, token = lead
+        
+        if not token:
+            token = generate_unsubscribe_token()
+            cursor.execute("UPDATE leads SET unsubscribe_token = ? WHERE id = ?", (token, lead_id))
+        
+        unsubscribe_url = f"{base_url}/unsubscribe/{token}"
+        
+        urls_data.append({
+            "lead_id": lead_id,
+            "email": email,
+            "name": f"{first_name} {last_name}",
+            "unsubscribe_url": unsubscribe_url
+        })
+    
+    if any(not lead[4] for lead in leads):  # If any tokens were missing
+        db.commit()
+    
+    return jsonify({
+        "campaign_id": campaign_id,
+        "total_leads": len(urls_data),
+        "unsubscribe_urls": urls_data
+    })
 
 # --- UPLOAD ENDPOINT (FROM N8N) WITH DUPLICATE DETECTION ---
 # --- UPLOAD ENDPOINT (FROM N8N) WITH DUPLICATE DETECTION --- (FIXED VERSION)
 @app.route('/upload', methods=['POST'])
 def upload_leads():
     data = request.get_json()
-    print(f"Received data: {data}")  # Debug logging
-    
+    print(f"Received data: {data}")
+
     # Handle both array and object formats
     if isinstance(data, list):
         if len(data) > 0:
             data = data[0]
         else:
             return jsonify({"status": "error", "message": "Empty data array"}), 400
-    
+
     campaign_name = data.get("campaign_name")
     leads = data.get("leads")
 
@@ -670,26 +871,26 @@ def upload_leads():
         return jsonify({"status": "error", "message": "Missing campaign_name or leads"}), 400
 
     try:
-        # Process leads data and remove duplicates
         leads_data = []
         for lead in leads:
             description = lead.get("description") or lead.get("Description", "")
             source = lead.get("source") or lead.get("Source", "API Import")
-            
+
             first_name = lead.get("first_name", "").strip()
             last_name = lead.get("last_name", "").strip()
             email = lead.get("email", "").strip()
             company = lead.get("company", "").strip()
-            
+
             if not email or not first_name:
                 continue
-            
+
             try:
                 score = int(lead.get("score", 5))
             except (ValueError, TypeError):
                 score = 5
-                
-            leads_data.append({
+
+            # Add unsubscribe token to each lead
+            lead_dict = {
                 'first_name': first_name,
                 'last_name': last_name,
                 'email': email,
@@ -698,25 +899,34 @@ def upload_leads():
                 'company': company,
                 'label': lead.get("label", ""),
                 'description': description,
-                'source': source
-            })
-        
+                'source': source,
+                'unsubscribe_token': generate_unsubscribe_token(),  # NEW
+                'unsubscribe_status': 'subscribed'  # Default
+            }
+            leads_data.append(lead_dict)
+
+        # Filter out unsubscribed leads before deduplication
+        filtered_leads, unsubscribed_count, unsubscribed_emails = filter_unsubscribed_leads(leads_data)
+        if unsubscribed_count > 0:
+            print(f"🚫 Filtered out {unsubscribed_count} unsubscribed emails: {unsubscribed_emails}")
+
         # Remove duplicates
-        unique_leads, duplicate_count = remove_duplicate_leads(leads_data)
-        
+        unique_leads, duplicate_count = remove_duplicate_leads(filtered_leads)
+
         if not unique_leads:
-            return jsonify({"status": "error", "message": "No valid unique profiles found"}), 400
+            return jsonify({
+                "status": "error",
+                "message": "No valid unique profiles found after filtering unsubscribed leads"
+            }), 400
 
         db = get_db()
         cursor = db.cursor()
 
-        # Check if campaigns table has created_at column
+        # Campaign insert
         cursor.execute("PRAGMA table_info(campaigns)")
-        campaigns_columns_info = cursor.fetchall()
-        campaigns_columns = [col[1] for col in campaigns_columns_info]
+        campaigns_columns = [col[1] for col in cursor.fetchall()]
         has_created_at = 'created_at' in campaigns_columns
 
-        # Create new campaign with conditional created_at column
         if has_created_at:
             cursor.execute("""
                 INSERT INTO campaigns (name, status, created_at) 
@@ -730,19 +940,21 @@ def upload_leads():
         
         campaign_id = cursor.lastrowid
 
-        # Check if leads table has the required columns
+        # Leads table column checks
         cursor.execute("PRAGMA table_info(leads)")
-        leads_columns_info = cursor.fetchall()
-        leads_columns = [col[1] for col in leads_columns_info]
-        
+        leads_columns = [col[1] for col in cursor.fetchall()]
+
         has_source = 'source' in leads_columns
         has_is_active = 'is_active' in leads_columns
         has_leads_created_at = 'created_at' in leads_columns
 
         leads_added = 0
         for lead in unique_leads:
-            # Build dynamic INSERT query based on available columns
-            columns = ['campaign_id', 'first_name', 'last_name', 'email', 'domain', 'score', 'company', 'label', 'description']
+            columns = [
+                'campaign_id', 'first_name', 'last_name', 'email', 'domain', 
+                'score', 'company', 'label', 'description',
+                'unsubscribe_token', 'unsubscribe_status'
+            ]
             values = [
                 campaign_id,
                 lead['first_name'],
@@ -752,25 +964,26 @@ def upload_leads():
                 lead['score'],
                 lead['company'],
                 lead['label'],
-                lead['description']
+                lead['description'],
+                lead['unsubscribe_token'],
+                lead['unsubscribe_status']
             ]
-            
+
             if has_source:
                 columns.append('source')
                 values.append(lead['source'])
-            
+
             if has_is_active:
                 columns.append('is_active')
                 values.append(1)
-            
+
             if has_leads_created_at:
                 columns.append('created_at')
                 values.append(datetime.now())
-            
-            # Create the INSERT query
-            columns_str = ', '.join(columns)
+
             placeholders_str = ', '.join(['?' for _ in columns])
-            
+            columns_str = ', '.join(columns)
+
             cursor.execute(f"""
                 INSERT INTO leads ({columns_str})
                 VALUES ({placeholders_str})
@@ -778,20 +991,22 @@ def upload_leads():
             leads_added += 1
 
         db.commit()
-        
+
         response_data = {
-            "status": "success", 
+            "status": "success",
             "campaign_id": campaign_id,
             "leads_added": leads_added,
-            "duplicates_removed": duplicate_count
+            "duplicates_removed": duplicate_count,
+            "unsubscribed_filtered": unsubscribed_count
         }
-        
-        print(f"âœ… Campaign created: {campaign_name} with {leads_added} unique leads (removed {duplicate_count} duplicates)")
+
+        print(f"✅ Campaign created: {campaign_name} with {leads_added} unique leads")
         return jsonify(response_data)
-        
+
     except Exception as e:
-        print(f"âŒ Error processing upload: {str(e)}")
+        print(f"❌ Error processing upload: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # --- DELETE CAMPAIGN ---
 @app.route('/delete_campaign/<int:campaign_id>', methods=['POST'])
@@ -1039,6 +1254,142 @@ def get_available_campaigns():
         })
     
     return jsonify(campaigns_list)
+
+
+def generate_unsubscribe_token():
+    """Generate a unique token for unsubscribe links"""
+    return secrets.token_urlsafe(32)
+
+def update_lead_tokens():
+    """Update existing leads with unsubscribe tokens if they don't have one"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Get leads without tokens
+    cursor.execute("SELECT id FROM leads WHERE unsubscribe_token IS NULL")
+    leads_without_tokens = cursor.fetchall()
+    
+    for lead in leads_without_tokens:
+        token = generate_unsubscribe_token()
+        cursor.execute("UPDATE leads SET unsubscribe_token = ? WHERE id = ?", (token, lead[0]))
+    
+    db.commit()
+    print(f"✅ Updated {len(leads_without_tokens)} leads with unsubscribe tokens")
+
+# Add these routes to your test_upload.py
+
+@app.route('/unsubscribe/<token>')
+def unsubscribe_lead(token):
+    """Handle unsubscribe requests from email links"""
+    if not token:
+        return render_template("unsubscribe_error.html", message="Invalid unsubscribe link"), 400
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Find lead by token
+    cursor.execute("""
+        SELECT id, first_name, last_name, email, unsubscribe_status 
+        FROM leads 
+        WHERE unsubscribe_token = ?
+    """, (token,))
+    
+    lead = cursor.fetchone()
+    
+    if not lead:
+        return render_template("unsubscribe_error.html", message="Invalid or expired unsubscribe link"), 404
+    
+    lead_id, first_name, last_name, email, current_status = lead
+    
+    if current_status == 'unsubscribed':
+        return render_template("unsubscribe_success.html", 
+                             message="You have already been unsubscribed from our emails",
+                             name=f"{first_name} {last_name}")
+    
+    # Update unsubscribe status
+    cursor.execute("""
+        UPDATE leads 
+        SET unsubscribe_status = 'unsubscribed', 
+            is_active = 0 
+        WHERE id = ?
+    """, (lead_id,))
+    
+    db.commit()
+    
+    print(f"🚫 Lead unsubscribed: {email}")
+    
+    return render_template("unsubscribe_success.html", 
+                         message="You have been successfully unsubscribed from our emails",
+                         name=f"{first_name} {last_name}")
+
+@app.route('/api/check_unsubscribed', methods=['POST'])
+def check_unsubscribed_leads():
+    """API endpoint to check if leads are unsubscribed before adding to campaigns"""
+    data = request.get_json()
+    emails = data.get('emails', [])
+    
+    if not emails:
+        return jsonify({"error": "No emails provided"}), 400
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    unsubscribed_leads = []
+    
+    for email in emails:
+        email = email.lower().strip()
+        cursor.execute("""
+            SELECT email, first_name, last_name, unsubscribe_status
+            FROM leads 
+            WHERE LOWER(email) = ? AND unsubscribe_status = 'unsubscribed'
+        """, (email,))
+        
+        result = cursor.fetchone()
+        if result:
+            unsubscribed_leads.append({
+                "email": result[0],
+                "name": f"{result[1]} {result[2]}",
+                "status": result[3]
+            })
+    
+    return jsonify({
+        "unsubscribed_count": len(unsubscribed_leads),
+        "unsubscribed_leads": unsubscribed_leads
+    })
+
+# Update your existing functions to handle unsubscribe status
+
+def filter_unsubscribed_leads(leads_data):
+    """
+    Filter out unsubscribed leads and return both filtered leads and unsubscribed count
+    """
+    db = get_db()
+    cursor = db.cursor()
+    
+    filtered_leads = []
+    unsubscribed_emails = []
+    
+    for lead in leads_data:
+        email = lead.get('email', '').lower().strip()
+        if not email:
+            continue
+            
+        # Check if email is unsubscribed
+        cursor.execute("""
+            SELECT email FROM leads 
+            WHERE LOWER(email) = ? AND unsubscribe_status = 'unsubscribed'
+            LIMIT 1
+        """, (email,))
+        
+        if cursor.fetchone():
+            unsubscribed_emails.append(email)
+        else:
+            # Add unsubscribe token if not present
+            if not lead.get('unsubscribe_token'):
+                lead['unsubscribe_token'] = generate_unsubscribe_token()
+            filtered_leads.append(lead)
+    
+    return filtered_leads, len(unsubscribed_emails), unsubscribed_emails
 
 
 
