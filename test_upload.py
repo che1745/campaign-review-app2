@@ -104,7 +104,14 @@ def init_db():
             print("✅ Added unsubscribe_token column to leads table")
         except sqlite3.OperationalError:
             print("ℹ️ unsubscribe_token column already exists")
-            
+
+        # Add this inside your init_db() function after the existing ALTER TABLE statements
+        try:
+            c.execute("ALTER TABLE leads ADD COLUMN email_status TEXT DEFAULT 'subscribed'")
+            print("✅ Added email_status column to leads table")
+        except sqlite3.OperationalError:
+            print("ℹ️ email_status column already exists")
+
         conn.commit()
 
 # --- UTILITY FUNCTIONS ---
@@ -125,6 +132,53 @@ def remove_duplicate_leads(leads_data):
         else:
             duplicate_count += 1
     
+    return unique_leads, duplicate_count
+
+def remove_duplicate_leads_with_status(leads_data):
+    """
+    Remove duplicate leads based on email address while preserving the LATEST email status
+    Returns unique leads and duplicate count
+    """
+    email_map = {}
+    duplicate_count = 0
+    
+    for lead in leads_data:
+        email = lead.get('email', '').lower().strip()
+        if not email:
+            continue
+            
+        if email in email_map:
+            # Duplicate found - keep the one with more recent/explicit status
+            existing_lead = email_map[email]
+            
+            # Priority logic for preserving email status:
+            # 1. Manual email_status takes precedence
+            # 2. If both have manual status, keep current
+            # 3. If neither has manual status, preserve external unsubscribe_status
+            
+            current_email_status = lead.get('email_status')
+            existing_email_status = existing_lead.get('email_status')
+            
+            if current_email_status and not existing_email_status:
+                # Current has manual status, existing doesn't - use current
+                email_map[email] = lead
+            elif not current_email_status and existing_email_status:
+                # Existing has manual status, current doesn't - keep existing
+                pass
+            elif current_email_status == 'unsubscribed' or existing_email_status == 'unsubscribed':
+                # If either is manually unsubscribed, preserve that status
+                if current_email_status == 'unsubscribed':
+                    email_map[email] = lead
+                # else keep existing (which has unsubscribed status)
+            else:
+                # For other cases, use the current lead (most recent)
+                email_map[email] = lead
+            
+            duplicate_count += 1
+        else:
+            email_map[email] = lead
+    
+    unique_leads = list(email_map.values())
     return unique_leads, duplicate_count
 
 def get_campaign_profile_count(campaign_id):
@@ -193,10 +247,11 @@ def merge_campaigns():
             flash('Some selected campaigns do not exist', 'error')
             return redirect(url_for('campaigns'))
         
-        # Get all leads from selected campaigns
+        # Get all leads from selected campaigns INCLUDING email subscription status
         cursor.execute(f"""
             SELECT first_name, last_name, email, domain, score, company, label, description, 
-                   COALESCE(source, 'Merged Campaign') as source
+                   COALESCE(source, 'Merged Campaign') as source,
+                   email_status, unsubscribe_status, unsubscribe_token
             FROM leads WHERE campaign_id IN ({placeholders})
         """, campaign_ids)
         all_leads = cursor.fetchall()
@@ -205,7 +260,7 @@ def merge_campaigns():
             flash('No profiles found in selected campaigns', 'error')
             return redirect(url_for('campaigns'))
         
-        # Convert to list of dictionaries for duplicate removal
+        # Convert to list of dictionaries for duplicate removal (PRESERVE EMAIL STATUS)
         leads_data = []
         for lead in all_leads:
             leads_data.append({
@@ -217,17 +272,20 @@ def merge_campaigns():
                 'company': lead[5] or '',
                 'label': lead[6] or '',
                 'description': lead[7] or '',
-                'source': lead[8] or 'Merged Campaign'
+                'source': lead[8] or 'Merged Campaign',
+                'email_status': lead[9],  # PRESERVE email status
+                'unsubscribe_status': lead[10],  # PRESERVE unsubscribe status
+                'unsubscribe_token': lead[11] or generate_unsubscribe_token()  # PRESERVE or generate token
             })
         
-        # Remove duplicates based on email
-        unique_leads, duplicate_count = remove_duplicate_leads(leads_data)
+        # Remove duplicates based on email (but preserve the LATEST email status)
+        unique_leads, duplicate_count = remove_duplicate_leads_with_status(leads_data)
         
         if not unique_leads:
             flash('No valid profiles found after removing duplicates', 'error')
             return redirect(url_for('campaigns'))
         
-        # Create new merged campaign with conditional columns - FIXED THE MISSING PARAMETERS
+        # Create new merged campaign with conditional columns
         if has_created_at and has_is_merged:
             cursor.execute("""
                 INSERT INTO campaigns (name, status, created_at, is_merged) 
@@ -239,11 +297,10 @@ def merge_campaigns():
                 VALUES (?, 'pending', ?)
             """, (merged_campaign_name, datetime.now()))
         elif has_is_merged:
-            # FIX: This was missing the parameter
             cursor.execute("""
                 INSERT INTO campaigns (name, status, is_merged) 
                 VALUES (?, 'pending', 1)
-            """, (merged_campaign_name,))  # Added missing parameter
+            """, (merged_campaign_name,))
         else:
             cursor.execute("""
                 INSERT INTO campaigns (name, status) 
@@ -267,8 +324,11 @@ def merge_campaigns():
         has_source = 'source' in leads_columns
         has_is_active = 'is_active' in leads_columns
         has_leads_created_at = 'created_at' in leads_columns
+        has_email_status = 'email_status' in leads_columns
+        has_unsubscribe_status = 'unsubscribe_status' in leads_columns
+        has_unsubscribe_token = 'unsubscribe_token' in leads_columns
         
-        # Insert unique leads into the new campaign
+        # Insert unique leads into the new campaign (PRESERVE EMAIL STATUS)
         leads_added = 0
         for lead in unique_leads:
             # Build dynamic INSERT query based on available columns
@@ -297,6 +357,19 @@ def merge_campaigns():
                 columns.append('created_at')
                 values.append(datetime.now())
             
+            # PRESERVE EMAIL SUBSCRIPTION STATUS
+            if has_email_status:
+                columns.append('email_status')
+                values.append(lead.get('email_status'))
+            
+            if has_unsubscribe_status:
+                columns.append('unsubscribe_status')
+                values.append(lead.get('unsubscribe_status'))
+            
+            if has_unsubscribe_token:
+                columns.append('unsubscribe_token')
+                values.append(lead.get('unsubscribe_token'))
+            
             # Create the INSERT query
             columns_str = ', '.join(columns)
             placeholders_str = ', '.join(['?' for _ in columns])
@@ -321,7 +394,7 @@ def merge_campaigns():
         success_message = f'Successfully merged {len(campaign_ids)} campaigns into "{merged_campaign_name}"'
         if duplicate_count > 0:
             success_message += f' - Removed {duplicate_count} duplicate profiles'
-        success_message += f' - {leads_added} unique profiles added'
+        success_message += f' - {leads_added} unique profiles added (email status preserved)'
         
         flash(success_message, 'success')
         return redirect(url_for('campaign_detail', campaign_id=merged_campaign_id))
@@ -435,6 +508,8 @@ def upload_csv():
         return redirect(url_for('campaigns'))
 
 # --- VIEW CAMPAIGN LEADS ---
+# Replace your existing campaign_detail route with this updated version:
+
 @app.route('/campaign/<int:campaign_id>')
 def campaign_detail(campaign_id):
     db = get_db()
@@ -444,14 +519,23 @@ def campaign_detail(campaign_id):
     cursor.execute("SELECT name FROM campaigns WHERE id = ?", (campaign_id,))
     campaign = cursor.fetchone()
     
+    # UPDATED: Include email_status in the query (position 11)
     cursor.execute("""
-        SELECT id, first_name, last_name, email, company, domain, score, label, description, source, is_active 
+        SELECT id, first_name, last_name, email, company, domain, score, label, description, source, is_active, email_status
         FROM leads WHERE campaign_id = ? ORDER BY id
     """, (campaign_id,))
     leads = cursor.fetchall()
     
     campaign_name = campaign[0] if campaign else f"Campaign {campaign_id}"
-    return render_template("campaign_detail.html", leads=leads, campaign_id=campaign_id, campaign_name=campaign_name)
+    
+    # Get referrer parameter to determine where to go back
+    referrer = request.args.get('referrer', 'campaigns')  # default to 'campaigns'
+    
+    return render_template("campaign_detail.html", 
+                         leads=leads, 
+                         campaign_id=campaign_id, 
+                         campaign_name=campaign_name,
+                         referrer=referrer)
 
 # --- APPROVE CAMPAIGN ---
 @app.route('/approve/<int:campaign_id>', methods=['POST'])
@@ -524,9 +608,13 @@ def bulk_toggle_leads(campaign_id, status):
     return redirect(url_for('campaign_detail', campaign_id=campaign_id))
 
 # --- ADD LEAD ---
-# --- ADD LEAD --- (FIXED VERSION)
+# Replace your existing add_lead route with this updated version:
+
 @app.route('/add_lead/<int:campaign_id>', methods=['GET', 'POST'])
 def add_lead(campaign_id):
+    # Get referrer parameter
+    referrer = request.args.get('referrer', 'campaigns')
+    
     if request.method == 'POST':
         data = request.form
         
@@ -535,13 +623,13 @@ def add_lead(campaign_id):
         for field in required_fields:
             if not data.get(field, '').strip():
                 flash(f'{field.replace("_", " ").title()} is required', 'error')
-                return render_template("add_lead.html", campaign_id=campaign_id)
+                return render_template("add_lead.html", campaign_id=campaign_id, referrer=referrer)
         
         # Validate email format
         email = data['email'].strip()
         if '@' not in email or '.' not in email.split('@')[1]:
             flash('Please enter a valid email address', 'error')
-            return render_template("add_lead.html", campaign_id=campaign_id)
+            return render_template("add_lead.html", campaign_id=campaign_id, referrer=referrer)
         
         try:
             db = get_db()
@@ -551,7 +639,7 @@ def add_lead(campaign_id):
             cursor.execute("SELECT id FROM leads WHERE email = ? AND campaign_id = ?", (email, campaign_id))
             if cursor.fetchone():
                 flash('A profile with this email already exists in this campaign', 'error')
-                return render_template("add_lead.html", campaign_id=campaign_id)
+                return render_template("add_lead.html", campaign_id=campaign_id, referrer=referrer)
             
             # Check if leads table has the required columns
             cursor.execute("PRAGMA table_info(leads)")
@@ -599,91 +687,90 @@ def add_lead(campaign_id):
             
             db.commit()
             flash('Profile added successfully!', 'success')
-            return redirect(url_for('campaign_detail', campaign_id=campaign_id))
+            return redirect(url_for('campaign_detail', campaign_id=campaign_id, referrer=referrer))
             
         except Exception as e:
             flash(f'Error adding profile: {str(e)}', 'error')
-            return render_template("add_lead.html", campaign_id=campaign_id)
+            return render_template("add_lead.html", campaign_id=campaign_id, referrer=referrer)
             
-    return render_template("add_lead.html", campaign_id=campaign_id)
+    return render_template("add_lead.html", campaign_id=campaign_id, referrer=referrer)
 
 # --- SEND TO N8N (ONLY ACTIVE LEADS) ---
-# Add this function to your test_upload.py
+# # Add this function to your test_upload.py
 
-def generate_email_body_with_unsubscribe(lead_data, base_url="http://localhost:5000"):
-    """
-    Generate email body with unsubscribe link
+# def generate_email_body_with_unsubscribe(lead_data, base_url="http://localhost:5000"):
+#     """
+#     Generate email body with unsubscribe link
     
-    Args:
-        lead_data: Dictionary containing lead information
-        base_url: Your application's base URL
+#     Args:
+#         lead_data: Dictionary containing lead information
+#         base_url: Your application's base URL
         
-    Returns:
-        String containing HTML email body with unsubscribe link
-    """
+#     Returns:
+#         String containing HTML email body with unsubscribe link
+#     """
     
-    first_name = lead_data.get('first_name', '')
-    last_name = lead_data.get('last_name', '')
-    email = lead_data.get('email', '')
-    company = lead_data.get('company', '')
-    unsubscribe_token = lead_data.get('unsubscribe_token', '')
+#     first_name = lead_data.get('first_name', '')
+#     last_name = lead_data.get('last_name', '')
+#     email = lead_data.get('email', '')
+#     company = lead_data.get('company', '')
+#     unsubscribe_token = lead_data.get('unsubscribe_token', '')
     
-    # Construct unsubscribe URL
-    unsubscribe_url = f"{base_url}/unsubscribe/{unsubscribe_token}"
+#     # Construct unsubscribe URL
+#     unsubscribe_url = f"{base_url}/unsubscribe/{unsubscribe_token}"
     
-    # Email template (you can customize this)
-    email_body = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-            .header {{ background: #667eea; color: white; padding: 20px; text-align: center; }}
-            .content {{ padding: 20px; background: #f9f9f9; }}
-            .footer {{ padding: 20px; font-size: 12px; color: #666; }}
-            .unsubscribe {{ margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; }}
-            .unsubscribe a {{ color: #856404; text-decoration: none; font-weight: bold; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h2>Hello {first_name} {last_name}!</h2>
-            </div>
+#     # Email template (you can customize this)
+#     email_body = f"""
+#     <!DOCTYPE html>
+#     <html>
+#     <head>
+#         <style>
+#             body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+#             .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+#             .header {{ background: #667eea; color: white; padding: 20px; text-align: center; }}
+#             .content {{ padding: 20px; background: #f9f9f9; }}
+#             .footer {{ padding: 20px; font-size: 12px; color: #666; }}
+#             .unsubscribe {{ margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; }}
+#             .unsubscribe a {{ color: #856404; text-decoration: none; font-weight: bold; }}
+#         </style>
+#     </head>
+#     <body>
+#         <div class="container">
+#             <div class="header">
+#                 <h2>Hello {first_name} {last_name}!</h2>
+#             </div>
             
-            <div class="content">
-                <p>We hope this email finds you well.</p>
+#             <div class="content">
+#                 <p>We hope this email finds you well.</p>
                 
-                <p>We're reaching out from <strong>{company}</strong> regarding our latest campaign.</p>
+#                 <p>We're reaching out from <strong>{company}</strong> regarding our latest campaign.</p>
                 
-                <p>[Your main email content goes here]</p>
+#                 <p>[Your main email content goes here]</p>
                 
-                <p>Best regards,<br>
-                Your Marketing Team</p>
-            </div>
+#                 <p>Best regards,<br>
+#                 Your Marketing Team</p>
+#             </div>
             
-            <div class="footer">
-                <div class="unsubscribe">
-                    <p><strong>Not interested?</strong></p>
-                    <p>If you no longer wish to receive emails from us, you can 
-                    <a href="{unsubscribe_url}">unsubscribe here</a>.</p>
-                    <p><small>This will remove you from all future email campaigns.</small></p>
-                </div>
+#             <div class="footer">
+#                 <div class="unsubscribe">
+#                     <p><strong>Not interested?</strong></p>
+#                     <p>If you no longer wish to receive emails from us, you can 
+#                     <a href="{unsubscribe_url}">unsubscribe here</a>.</p>
+#                     <p><small>This will remove you from all future email campaigns.</small></p>
+#                 </div>
                 
-                <hr>
-                <p>This email was sent to {email}</p>
-                <p>© 2024 Your Company Name. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+#                 <hr>
+#                 <p>This email was sent to {email}</p>
+#                 <p>© 2024 Your Company Name. All rights reserved.</p>
+#             </div>
+#         </div>
+#     </body>
+#     </html>
+#     """
     
-    return email_body.strip()
+#     return email_body.strip()
 
 # Modify your send_to_n8n function to include unsubscribe tokens
-# Modified send_to_n8n function - sends only unsubscribe URL instead of full email body
 @app.route('/send_to_n8n/<int:campaign_id>', methods=['POST'])
 def send_to_n8n(campaign_id):
     db = get_db()
@@ -696,13 +783,23 @@ def send_to_n8n(campaign_id):
         flash('Campaign is not approved', 'error')
         return redirect(url_for('campaigns'))
 
-    # 2. Fetch only ACTIVE and SUBSCRIBED leads in campaign
+    # 2. Fetch only ACTIVE leads with proper email status logic
+    # Priority: Manual email_status overrides external unsubscribe_status
     cursor.execute("""
         SELECT id, first_name, last_name, email, company, domain, score, label, description, source, unsubscribe_token
         FROM leads 
         WHERE campaign_id = ? 
         AND is_active = 1 
-        AND (unsubscribe_status IS NULL OR unsubscribe_status = 'subscribed')
+        AND (
+            -- Case 1: email_status is explicitly 'subscribed' (manual override)
+            email_status = 'subscribed'
+            OR 
+            -- Case 2: email_status is NULL/default and not externally unsubscribed
+            (
+                (email_status IS NULL OR email_status = 'subscribed') 
+                AND (unsubscribe_status IS NULL OR unsubscribe_status = 'subscribed')
+            )
+        )
     """, (campaign_id,))
     leads = cursor.fetchall()
 
@@ -1276,18 +1373,17 @@ def update_lead_tokens():
     db.commit()
     print(f"✅ Updated {len(leads_without_tokens)} leads with unsubscribe tokens")
 
-# Add these routes to your test_upload.py
+# Simplified version - just show confirmation then redirect
 
 @app.route('/unsubscribe/<token>')
-def unsubscribe_lead(token):
-    """Handle unsubscribe requests from email links"""
+def unsubscribe_confirmation(token):
+    """Show simple unsubscribe confirmation page"""
     if not token:
-        return render_template("unsubscribe_error.html", message="Invalid unsubscribe link"), 400
+        return "Invalid unsubscribe link", 400
     
     db = get_db()
     cursor = db.cursor()
     
-    # Find lead by token
     cursor.execute("""
         SELECT id, first_name, last_name, email, unsubscribe_status 
         FROM leads 
@@ -1297,30 +1393,54 @@ def unsubscribe_lead(token):
     lead = cursor.fetchone()
     
     if not lead:
-        return render_template("unsubscribe_error.html", message="Invalid or expired unsubscribe link"), 404
+        return "Invalid or expired unsubscribe link", 404
     
     lead_id, first_name, last_name, email, current_status = lead
     
     if current_status == 'unsubscribed':
-        return render_template("unsubscribe_success.html", 
-                             message="You have already been unsubscribed from our emails",
-                             name=f"{first_name} {last_name}")
+        return f"<h2>Already Unsubscribed</h2><p>{first_name} {last_name}, you are already unsubscribed.</p>"
     
-    # Update unsubscribe status
+    return render_template("simple_unsubscribe.html", 
+                         token=token,
+                         name=f"{first_name} {last_name}",
+                         email=email)
+
+@app.route('/confirm_unsubscribe/<token>', methods=['POST'])
+def confirm_unsubscribe(token):
+    """Process unsubscribe and show simple message"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("""
+        SELECT id, first_name, last_name, email 
+        FROM leads 
+        WHERE unsubscribe_token = ?
+    """, (token,))
+    
+    lead = cursor.fetchone()
+    
+    if not lead:
+        return "Invalid link", 404
+    
+    lead_id, first_name, last_name, email = lead
+    
+    # Unsubscribe
     cursor.execute("""
         UPDATE leads 
-        SET unsubscribe_status = 'unsubscribed', 
-            is_active = 0 
+        SET unsubscribe_status = 'unsubscribed', is_active = 0 
         WHERE id = ?
     """, (lead_id,))
     
     db.commit()
     
-    print(f"🚫 Lead unsubscribed: {email}")
-    
-    return render_template("unsubscribe_success.html", 
-                         message="You have been successfully unsubscribed from our emails",
-                         name=f"{first_name} {last_name}")
+    # Simple success message
+    return f"""
+    <div style="text-align: center; font-family: Arial; padding: 50px;">
+        <h2 style="color: green;">✅ Unsubscribed Successfully</h2>
+        <p><strong>{first_name} {last_name}</strong>, you've been unsubscribed from our emails.</p>
+        <p style="color: gray;">You can now close this page.</p>
+    </div>
+    """
 
 @app.route('/api/check_unsubscribed', methods=['POST'])
 def check_unsubscribed_leads():
@@ -1362,6 +1482,7 @@ def check_unsubscribed_leads():
 def filter_unsubscribed_leads(leads_data):
     """
     Filter out unsubscribed leads and return both filtered leads and unsubscribed count
+    Priority: Manual email_status overrides external unsubscribe_status
     """
     db = get_db()
     cursor = db.cursor()
@@ -1374,24 +1495,124 @@ def filter_unsubscribed_leads(leads_data):
         if not email:
             continue
             
-        # Check if email is unsubscribed
+        # Check email subscription status with priority logic
         cursor.execute("""
-            SELECT email FROM leads 
-            WHERE LOWER(email) = ? AND unsubscribe_status = 'unsubscribed'
+            SELECT email, email_status, unsubscribe_status FROM leads 
+            WHERE LOWER(email) = ?
+            ORDER BY id DESC
             LIMIT 1
         """, (email,))
         
-        if cursor.fetchone():
+        result = cursor.fetchone()
+        should_exclude = False
+        
+        if result:
+            email_status = result[1]  # manual status
+            unsubscribe_status = result[2]  # external status
+            
+            # Logic: Exclude only if unsubscribed and NOT manually overridden
+            if email_status == 'unsubscribed':
+                # Manually unsubscribed - always exclude
+                should_exclude = True
+            elif email_status == 'subscribed':
+                # Manually subscribed - always include (overrides external unsubscribe)
+                should_exclude = False
+            elif unsubscribe_status == 'unsubscribed':
+                # Externally unsubscribed and no manual override - exclude
+                should_exclude = True
+            # If both are NULL or 'subscribed', include the lead
+        
+        if should_exclude:
             unsubscribed_emails.append(email)
         else:
             # Add unsubscribe token if not present
             if not lead.get('unsubscribe_token'):
                 lead['unsubscribe_token'] = generate_unsubscribe_token()
+            # Ensure default subscription status for new leads
+            if not lead.get('email_status'):
+                lead['email_status'] = 'subscribed'
             filtered_leads.append(lead)
     
     return filtered_leads, len(unsubscribed_emails), unsubscribed_emails
 
+# Add these new routes to your Flask app (test_upload.py)
 
+@app.route('/toggle_email_status/<int:lead_id>/<int:campaign_id>', methods=['POST'])
+def toggle_email_status(lead_id, campaign_id):
+    """Toggle email subscription status for a lead internally"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Get current email status and unsubscribe status
+    cursor.execute("SELECT email_status, unsubscribe_status, email, first_name, last_name FROM leads WHERE id = ?", (lead_id,))
+    current_data = cursor.fetchone()
+    
+    if current_data:
+        current_email_status = current_data[0] or 'subscribed'  # Default to subscribed if NULL
+        current_unsubscribe_status = current_data[1]
+        email = current_data[2]
+        name = f"{current_data[3]} {current_data[4]}"
+        
+        # Toggle logic
+        new_status = 'unsubscribed' if current_email_status == 'subscribed' else 'subscribed'
+        
+        # If manually subscribing someone who was externally unsubscribed, override the external status
+        if new_status == 'subscribed' and current_unsubscribe_status == 'unsubscribed':
+            cursor.execute("""
+                UPDATE leads 
+                SET email_status = ?, unsubscribe_status = 'subscribed' 
+                WHERE id = ?
+            """, (new_status, lead_id))
+            print(f"✅ Manual override: Resubscribed {email} (was externally unsubscribed)")
+            flash(f'Profile {name} manually resubscribed (overriding external unsubscribe)!', 'success')
+        else:
+            # Normal toggle
+            cursor.execute("UPDATE leads SET email_status = ? WHERE id = ?", (new_status, lead_id))
+            action = "subscribed" if new_status == 'subscribed' else "unsubscribed"
+            flash(f'Profile {name} {action} successfully!', 'success')
+            print(f"📧 Email status changed: {email} -> {action}")
+        
+        db.commit()
+    else:
+        flash('Profile not found!', 'error')
+    
+    return redirect(url_for('campaign_detail', campaign_id=campaign_id))
+
+@app.route('/bulk_email_status/<int:campaign_id>/<status>', methods=['POST'])
+def bulk_email_status(campaign_id, status):
+    """Bulk update email subscription status"""
+    lead_ids = request.form.getlist('lead_ids')
+    if lead_ids:
+        db = get_db()
+        cursor = db.cursor()
+        placeholders = ','.join('?' for _ in lead_ids)
+        cursor.execute(f"UPDATE leads SET email_status = ? WHERE id IN ({placeholders})", [status] + lead_ids)
+        db.commit()
+        
+        action = "subscribed" if status == 'subscribed' else "unsubscribed"
+        flash(f'Successfully {action} {len(lead_ids)} profiles!', 'success')
+    return redirect(url_for('campaign_detail', campaign_id=campaign_id))
+
+@app.route('/api/email_status_stats/<int:campaign_id>')
+def get_email_status_stats(campaign_id):
+    """Get email subscription statistics for a campaign"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM leads WHERE campaign_id = ? AND email_status = 'subscribed'", (campaign_id,))
+    subscribed_count = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM leads WHERE campaign_id = ? AND email_status = 'unsubscribed'", (campaign_id,))
+    unsubscribed_count = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM leads WHERE campaign_id = ?", (campaign_id,))
+    total_count = cursor.fetchone()[0]
+    
+    return jsonify({
+        "subscribed": subscribed_count,
+        "unsubscribed": unsubscribed_count,
+        "total": total_count
+    })
 
 if __name__ == '__main__':
     init_db()

@@ -428,6 +428,257 @@
       font-weight: normal;
       margin-left: 10px;
     }
+
+    /* Merge popup styles */
+.merge-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index: 1000;
+}
+
+.merge-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.merge-popup h3 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.merge-popup h4 {
+  color: #155724;
+  margin-bottom: 15px;
+  font-size: 1em;
+}
+
+.dropdown-container {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.dropdown-button {
+  width: 100%;
+  padding: 12px 16px;
+  background: white;
+  border: 2px solid #c3e6cb;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #495057;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s;
+  min-height: 50px;
+}
+
+.dropdown-button:hover {
+  border-color: #28a745;
+  background: #f8f9fa;
+}
+
+.dropdown-button.active {
+  border-color: #28a745;
+  background: #f8f9fa;
+}
+
+.dropdown-arrow {
+  transition: transform 0.3s;
+}
+
+.dropdown-button.active .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #c3e6cb;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+}
+
+.dropdown-menu.show {
+  display: block;
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f3f4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.campaign-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.campaign-name {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.campaign-details {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.campaign-checkbox {
+  margin-left: 10px;
+  transform: scale(1.2);
+}
+
+.selected-campaigns {
+  margin-top: 20px;
+}
+
+.selected-list {
+  background: white;
+  border: 2px solid #c3e6cb;
+  border-radius: 8px;
+  min-height: 80px;
+  padding: 15px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.selected-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #e8f5e8;
+  border: 1px solid #c3e6cb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.selected-item:last-child {
+  margin-bottom: 0;
+}
+
+.remove-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.remove-btn:hover {
+  background: #c82333;
+}
+
+.empty-selection {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+.selected-count {
+  font-weight: 600;
+  color: #28a745;
+}
+
+.popup-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.btn-popup {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-popup-merge {
+  background: #28a745;
+  color: white;
+}
+
+.btn-popup-merge:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.btn-popup-cancel {
+  background: #6c757d;
+  color: white;
+}
+/* Add this CSS to your existing styles */
+.btn-merge-header {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+}
+
+.btn-merge-header:hover {
+  background: linear-gradient(135deg, #218838, #1e9e8a);
+  transform: translateY(-50%) translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btn-merge-header:active {
+  transform: translateY(-50%) translateY(0);
+}
   </style>
 </head>
 <body>
@@ -451,7 +702,7 @@
     <div class="tabs-container">
       <div class="tabs-nav">
         <button class="tab-button active" onclick="switchTab('campaigns')">
-          📋 Manage Campaigns
+          📋 Manage Distributed Lists
         </button>
         <button class="tab-button" onclick="switchTab('merge')">
           🔄 Merge Campaigns
@@ -464,7 +715,7 @@
         <div class="upload-section">
           <div class="upload-title">
             <span>📤</span>
-            Upload New Campaign
+            Upload New Distributed List
           </div>
           
           <form method="POST" action="{{ url_for('upload_csv') }}" enctype="multipart/form-data" class="upload-form" id="uploadForm">
@@ -498,6 +749,14 @@
           Showing <span id="recordsCount">0</span> campaigns
         </div>
         
+        <!-- Add this before the table-container div
+<div class="merge-controls" style="margin-bottom: 20px;">
+  <button type="button" class="btn btn-merge" onclick="showMergePopup()">
+    📄 Merge Campaigns
+  </button>
+</div> -->
+
+        
         <!-- Campaigns Table -->
         <div class="table-container">
           <table id="campaignsTable">
@@ -507,7 +766,12 @@
                 <th>Campaign Name</th>
                 <th>Status</th>
                 <th>Profile Count</th>
-                <th>Actions</th>
+                    <th style="position: relative; padding-right: 120px;">
+      ACTIONS
+      <button type="button" class="btn-merge-header" onclick="showMergePopup()" title="Merge Campaigns">
+        📄 Merge Campaigns
+      </button>
+    </th>
               </tr>
             </thead>
             <tbody id="tableBody">
@@ -573,6 +837,183 @@
     const recordsPerPage = 10;
     let filteredRows = [];
     let allRows = [];
+    let selectedCampaigns = new Map();
+let allCampaigns = [];
+let dropdownOpen = false;
+
+function showMergePopup() {
+  loadAvailableCampaigns();
+  document.getElementById('mergePopupOverlay').style.display = 'block';
+}
+
+function closeMergePopup() {
+  document.getElementById('mergePopupOverlay').style.display = 'none';
+  selectedCampaigns.clear();
+  dropdownOpen = false;
+  document.getElementById('mergedCampaignName').value = '';
+  updateSelectedDisplay();
+}
+
+function loadAvailableCampaigns() {
+  // Get campaigns from the current table
+  const tableRows = document.querySelectorAll('#tableBody tr');
+  allCampaigns = [];
+  
+  tableRows.forEach(row => {
+    const cells = row.cells;
+    const id = parseInt(cells[0].textContent.trim().replace('#', ''));
+    const name = cells[1].textContent.trim();
+    const status = cells[2].textContent.trim();
+    const profileCount = parseInt(cells[3].textContent.trim()) || 0;
+    
+    allCampaigns.push({
+      id: id,
+      name: name,
+      status: status,
+      profile_count: profileCount
+    });
+  });
+  
+  renderDropdownItems();
+}
+
+function renderDropdownItems() {
+  const dropdownMenu = document.getElementById('dropdownMenu');
+  
+  if (allCampaigns.length === 0) {
+    dropdownMenu.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">No campaigns available</div>';
+    return;
+  }
+  
+  dropdownMenu.innerHTML = allCampaigns.map(campaign => `
+    <div class="dropdown-item" onclick="toggleCampaignSelection(${campaign.id})">
+      <div class="campaign-info">
+        <div class="campaign-name">${campaign.name}</div>
+        <div class="campaign-details">
+          ID: ${campaign.id} • Status: ${campaign.status} • Profiles: ${campaign.profile_count}
+        </div>
+      </div>
+      <input type="checkbox" class="campaign-checkbox" id="campaign_${campaign.id}" ${selectedCampaigns.has(campaign.id) ? 'checked' : ''}>
+    </div>
+  `).join('');
+}
+
+function toggleDropdown() {
+  dropdownOpen = !dropdownOpen;
+  const dropdown = document.getElementById('campaignDropdown');
+  const menu = document.getElementById('dropdownMenu');
+  
+  if (dropdownOpen) {
+    dropdown.classList.add('active');
+    menu.classList.add('show');
+  } else {
+    dropdown.classList.remove('active');
+    menu.classList.remove('show');
+  }
+}
+
+function toggleCampaignSelection(campaignId) {
+  const campaign = allCampaigns.find(c => c.id === campaignId);
+  if (!campaign) return;
+  
+  if (selectedCampaigns.has(campaignId)) {
+    selectedCampaigns.delete(campaignId);
+  } else {
+    selectedCampaigns.set(campaignId, campaign);
+  }
+  
+  updateSelectedDisplay();
+  renderDropdownItems(); // Update checkboxes
+}
+
+function removeCampaign(campaignId) {
+  selectedCampaigns.delete(campaignId);
+  updateSelectedDisplay();
+  renderDropdownItems();
+}
+
+function updateSelectedDisplay() {
+  const selectedList = document.getElementById('selectedList');
+  const selectedCount = document.getElementById('selectedCount');
+  const mergeBtn = document.getElementById('performMergeBtn');
+  
+  selectedCount.textContent = selectedCampaigns.size;
+  
+  if (selectedCampaigns.size === 0) {
+    selectedList.innerHTML = '<div class="empty-selection">No campaigns selected</div>';
+    mergeBtn.disabled = true;
+  } else {
+    selectedList.innerHTML = Array.from(selectedCampaigns.values()).map(campaign => `
+      <div class="selected-item">
+        <div class="campaign-info">
+          <div class="campaign-name">${campaign.name}</div>
+          <div class="campaign-details">ID: ${campaign.id} • Profiles: ${campaign.profile_count}</div>
+        </div>
+        <button class="remove-btn" onclick="removeCampaign(${campaign.id})" type="button">✕</button>
+      </div>
+    `).join('');
+    
+    mergeBtn.disabled = selectedCampaigns.size < 2;
+  }
+}
+
+function performMerge() {
+  const campaignName = document.getElementById('mergedCampaignName').value.trim();
+  
+  if (!campaignName) {
+    alert('Please enter a name for the merged campaign');
+    return;
+  }
+  
+  if (selectedCampaigns.size < 2) {
+    alert('Please select at least 2 campaigns to merge');
+    return;
+  }
+  
+  if (!confirm(`Are you sure you want to merge ${selectedCampaigns.size} campaigns into "${campaignName}"?\n\nOriginal campaigns will be deleted.`)) {
+    return;
+  }
+  
+  // Create form and submit
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/merge_campaigns';
+  
+  // Add campaign IDs
+  selectedCampaigns.forEach((campaign, id) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'campaign_ids[]';
+    input.value = id;
+    form.appendChild(input);
+  });
+  
+  // Add campaign name
+  const nameInput = document.createElement('input');
+  nameInput.type = 'hidden';
+  nameInput.name = 'merged_campaign_name';
+  nameInput.value = campaignName;
+  form.appendChild(nameInput);
+  
+  document.body.appendChild(form);
+  form.submit();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+  const dropdownContainer = document.querySelector('.dropdown-container');
+  if (dropdownContainer && !dropdownContainer.contains(event.target) && dropdownOpen) {
+    toggleDropdown();
+  }
+});
+
+// Close popup when clicking outside
+document.addEventListener('click', function(event) {
+  const overlay = document.getElementById('mergePopupOverlay');
+  if (overlay && event.target === overlay) {
+    closeMergePopup();
+  }
+});
 
     function switchTab(tabName) {
       // Hide all tab contents
@@ -708,5 +1149,44 @@
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', initializeTable);
   </script>
+
+  <!-- Merge Popup -->
+<div class="merge-popup-overlay" id="mergePopupOverlay">
+  <div class="merge-popup">
+    <h3>📄 Merge Campaigns</h3>
+    
+    <div class="campaign-selector">
+      <h4>📋 Available Campaigns</h4>
+      
+      <div class="dropdown-container">
+        <div class="dropdown-button" id="campaignDropdown" onclick="toggleDropdown()">
+          <span>Select campaigns to merge...</span>
+          <span class="dropdown-arrow">▼</span>
+        </div>
+        
+        <div class="dropdown-menu" id="dropdownMenu">
+          <!-- Campaigns will be loaded here -->
+        </div>
+      </div>
+      
+      <div class="selected-campaigns">
+        <h4>Selected Campaigns (<span id="selectedCount" class="selected-count">0</span>)</h4>
+        <div class="selected-list" id="selectedList">
+          <div class="empty-selection">No campaigns selected</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin: 20px 0;">
+      <label for="mergedCampaignName">New Campaign Name:</label>
+      <input type="text" id="mergedCampaignName" placeholder="Enter merged campaign name..." style="width: 100%; padding: 10px; margin-top: 8px; border: 2px solid #dee2e6; border-radius: 6px;">
+    </div>
+    
+    <div class="popup-buttons">
+      <button class="btn-popup btn-popup-cancel" onclick="closeMergePopup()">Cancel</button>
+      <button class="btn-popup btn-popup-merge" onclick="performMerge()" id="performMergeBtn" disabled>Merge Campaigns</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -557,12 +557,12 @@
     {% endwith %}
 
     <div class="header">
-      <h2>🔄 Merge Campaigns</h2>
-      <a href="{{ url_for('campaigns') }}" class="back-link">⬅️ Back to Campaigns</a>
+      <h2>🔄Merge Campaigns</h2>
+      <a href="{{ url_for('campaigns') }}" class="back-link">⬅️Back to Campaigns</a>
     </div>
 
     <!-- Merge Campaigns Section -->
-    <div class="merge-section">
+    <!-- <div class="merge-section">
       <div class="merge-title">
         <span>🔄</span>
         Select Campaigns to Merge
@@ -578,7 +578,7 @@
           </div>
           
           <div class="dropdown-menu" id="dropdownMenu">
-            <!-- Campaigns will be loaded here -->
+            
           </div>
         </div>
         
@@ -590,11 +590,11 @@
         </div>
       </div>
 
-      <!-- Merge Preview -->
+      
       <div class="merge-preview" id="mergePreview">
-        <div class="preview-title">📊 Merge Preview</div>
+        <div class="preview-title">📊Merge Preview</div>
         <div class="preview-stats" id="previewStats">
-          <!-- Stats will be loaded here -->
+          
         </div>
       </div>
       
@@ -608,22 +608,22 @@
           <span>🔄</span>
           Merge Selected Campaigns
         </button>
-      </form>
+      </form> -->
 
       <!-- <div class="merge-info">
-        <h4>📋 About Campaign Merging:</h4>
-        <p>• Select 2 or more campaigns from the dropdown above</p>
-        <p>• All profiles from selected campaigns will be combined into one new campaign</p>
-        <p>• <strong>Duplicate profiles are automatically removed</strong> during the merge process</p>
-        <p>• Original campaigns will be deleted after successful merge</p>
-        <p>• The new merged campaign will start with 'pending' status</p>
-        <p>• You can see a preview of the merge statistics before confirming</p>
+        <h4>ðŸ“‹ About Campaign Merging:</h4>
+        <p>â€¢ Select 2 or more campaigns from the dropdown above</p>
+        <p>â€¢ All profiles from selected campaigns will be combined into one new campaign</p>
+        <p>â€¢ <strong>Duplicate profiles are automatically removed</strong> during the merge process</p>
+        <p>â€¢ Original campaigns will be deleted after successful merge</p>
+        <p>â€¢ The new merged campaign will start with 'pending' status</p>
+        <p>â€¢ You can see a preview of the merge statistics before confirming</p>
       </div>
     </div> -->
     
     <!-- Existing Merged Campaigns Table -->
     <div style="margin-top: 40px;">
-      <h3 style="color: #2c3e50; margin-bottom: 20px;">📁 Previously Merged Campaigns <span class="campaign-count">({{ campaigns|length }} campaigns)</span></h3>
+      <h3 style="color: #2c3e50; margin-bottom: 20px;">📂 Previously Merged Campaigns <span class="campaign-count">({{ campaigns|length }} campaigns)</span></h3>
       
       {% if campaigns %}
       <div class="table-container">
@@ -651,9 +651,9 @@
               <td><strong>{{ c[3] if c[3] else 0 }}</strong></td>
               <td>
                 <div class="actions">
-                  <a href="{{ url_for('campaign_detail', campaign_id=c[0]) }}" class="btn btn-view">👥 View Profiles</a>
+                  <a href="{{ url_for('campaign_detail', campaign_id=c[0], referrer='merge') }}" class="btn btn-view">👥 View Profiles</a>
                   <form method="POST" action="{{ url_for('delete_campaign', campaign_id=c[0]) }}" style="display:inline;">
-                    <button type="submit" class="btn btn-delete" onclick="return confirm('⚠️ Are you sure you want to delete this campaign and all its profiles?')">🗑️ Delete</button>
+                    <button type="submit" class="btn btn-delete" onclick="return confirm('🗑️Are you sure you want to delete this campaign and all its profiles?')">🗑️Delete</button>
                   </form>
                   {% if c[2] == 'approved' %}
                   <form method="POST" action="{{ url_for('send_to_n8n', campaign_id=c[0]) }}" style="display:inline;">
@@ -713,7 +713,7 @@
           <div class="campaign-info">
             <div class="campaign-name">${campaign.name}</div>
             <div class="campaign-details">
-              ID: ${campaign.id} • Status: ${campaign.status} • Profiles: ${campaign.profile_count}
+              ID: ${campaign.id} â€¢ Status: ${campaign.status} â€¢ Profiles: ${campaign.profile_count}
             </div>
           </div>
           <input type="checkbox" class="campaign-checkbox" id="campaign_${campaign.id}" ${selectedCampaigns.has(campaign.id) ? 'checked' : ''}>
@@ -784,9 +784,9 @@
           <div class="selected-item">
             <div class="campaign-info">
               <div class="campaign-name">${campaign.name}</div>
-              <div class="campaign-details">ID: ${campaign.id} • Profiles: ${campaign.profile_count}</div>
+              <div class="campaign-details">ID: ${campaign.id} â€¢ Profiles: ${campaign.profile_count}</div>
             </div>
-            <button class="remove-btn" onclick="removeCampaign(${campaign.id})" type="button">✕</button>
+            <button class="remove-btn" onclick="removeCampaign(${campaign.id})" type="button">âœ•</button>
           </div>
         `).join('');
         
@@ -876,7 +876,7 @@
       // Show loading state
       const btn = document.getElementById('mergeBtn');
       btn.disabled = true;
-      btn.innerHTML = '<span>⏳</span> Merging Campaigns...';
+      btn.innerHTML = '<span>â³</span> Merging Campaigns...';
     });
   </script>
 </body>

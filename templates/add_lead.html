@@ -363,12 +363,12 @@
       
       <div class="button-group">
         <button type="submit" class="btn btn-primary">➕ Add Profile</button>
-        <a href="{{ url_for('campaign_detail', campaign_id=campaign_id) }}" class="btn btn-secondary">Cancel</a>
+        <a href="{{ url_for('campaign_detail', campaign_id=campaign_id, referrer=referrer) }}" class="btn btn-secondary">Cancel</a>
       </div>
     </form>
     
     <div style="text-align: center;">
-      <a href="{{ url_for('campaign_detail', campaign_id=campaign_id) }}" class="back-link">⬅️ Back to Campaign</a>
+      <a href="{{ url_for('campaign_detail', campaign_id=campaign_id, referrer=referrer) }}" class="back-link">⬅️ Back to Campaign</a>
     </div>
   </div>
 
