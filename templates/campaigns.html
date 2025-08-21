@@ -695,7 +695,7 @@
     {% endwith %}
 
     <div class="header">
-      <h2>📁 Campaign Management <span class="campaign-count">({{ campaigns|length }} campaigns)</span></h2>
+      <h2>📁 Campaign Management <span class="campaign-count">({{ campaigns|length }} Distributed List)</span></h2>
     </div>
     
     <!-- Tabs Navigation -->
@@ -705,7 +705,7 @@
           📋 Manage Distributed Lists
         </button>
         <button class="tab-button" onclick="switchTab('merge')">
-          🔄 Merge Campaigns
+          🔄 Manage Campaigns
         </button>
       </div>
 
@@ -720,8 +720,8 @@
           
           <form method="POST" action="{{ url_for('upload_csv') }}" enctype="multipart/form-data" class="upload-form" id="uploadForm">
             <div class="form-group">
-              <label for="campaign_name">Campaign Name</label>
-              <input type="text" id="campaign_name" name="campaign_name" placeholder="Enter campaign name..." required>
+              <label for="campaign_name">Distributed list Name</label>
+              <input type="text" id="campaign_name" name="campaign_name" placeholder="Enter List name..." required>
             </div>
             
             <div class="form-group">
@@ -741,12 +741,12 @@
 
         <!-- Search and Filter -->
         <div class="search-container">
-          <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search campaigns by name, status..." />
+          <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search Distributed List by name, status..." />
           <button class="clear-btn" onclick="clearSearch()">Clear</button>
         </div>
         
         <div class="records-info">
-          Showing <span id="recordsCount">0</span> campaigns
+          Showing <span id="recordsCount">0</span> Lists
         </div>
         
         <!-- Add this before the table-container div
@@ -763,7 +763,7 @@
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Campaign Name</th>
+                <th>List Name</th>
                 <th>Status</th>
                 <th>Profile Count</th>
                     <th style="position: relative; padding-right: 120px;">
@@ -805,7 +805,7 @@
           </table>
           
           <div id="noResults" class="no-results" style="display: none;">
-            <h3>No campaigns found</h3>
+            <h3>No Lists found</h3>
             <p>Try adjusting your search criteria or upload a new campaign</p>
           </div>
         </div>
