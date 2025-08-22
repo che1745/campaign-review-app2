@@ -679,6 +679,34 @@
 .btn-merge-header:active {
   transform: translateY(-50%) translateY(0);
 }
+
+/* Add to existing CSS in both templates */
+.upload-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 768px) {
+  .upload-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+.merge-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 15px;
+  align-items: end;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .merge-controls {
+    grid-template-columns: 1fr;
+  }
+}
   </style>
 </head>
 <body>
@@ -698,7 +726,7 @@
       <h2>📁 Campaign Management <span class="campaign-count">({{ campaigns|length }} Distributed List)</span></h2>
     </div>
     
-    <!-- Tabs Navigation -->
+    <!-- Tabs Navigaton -->
     <div class="tabs-container">
       <div class="tabs-nav">
         <button class="tab-button active" onclick="switchTab('campaigns')">
@@ -722,6 +750,11 @@
             <div class="form-group">
               <label for="campaign_name">Distributed list Name</label>
               <input type="text" id="campaign_name" name="campaign_name" placeholder="Enter List name..." required>
+            </div>
+
+            <div class="form-group">
+              <label for="campaign_description">Description (Optional)</label>
+              <input type="text" id="campaign_description" name="campaign_description" placeholder="Brief description of this list...">
             </div>
             
             <div class="form-group">
@@ -764,6 +797,7 @@
               <tr>
                 <th>ID</th>
                 <th>List Name</th>
+                <th>Description</th>
                 <th>Status</th>
                 <th>Profile Count</th>
                     <th style="position: relative; padding-right: 120px;">
@@ -780,12 +814,17 @@
                 <td><strong>#{{ c[0] }}</strong></td>
                 <td>{{ c[1] }}</td>
                 <td>
+                  <span style="color: #6c757d; font-size: 13px; max-width: 200px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ c[3] or 'No description' }}">
+                    {{ c[3] or 'No description' }}
+                  </span>
+                </td>
+                <td>
                   <span class="status-badge 
                     {% if c[2] == 'approved' %}status-approved
                     {% elif c[2] == 'pending' %}status-pending
                     {% else %}status-draft{% endif %}">{{ c[2] }}</span>
                 </td>
-                <td><strong>{{ c[3] if c[3] else 0 }}</strong></td>
+                <td><strong>{{ c[4] if c[4] else 0 }}</strong></td>
                 <td>
                   <div class="actions">
                     <a href="{{ url_for('campaign_detail', campaign_id=c[0]) }}" class="btn btn-view">👥 View Profiles</a>
@@ -854,6 +893,8 @@ function closeMergePopup() {
   updateSelectedDisplay();
 }
 
+// Replace the loadAvailableCampaigns function in your campaigns.html with this fixed version:
+
 function loadAvailableCampaigns() {
   // Get campaigns from the current table
   const tableRows = document.querySelectorAll('#tableBody tr');
@@ -863,18 +904,43 @@ function loadAvailableCampaigns() {
     const cells = row.cells;
     const id = parseInt(cells[0].textContent.trim().replace('#', ''));
     const name = cells[1].textContent.trim();
-    const status = cells[2].textContent.trim();
-    const profileCount = parseInt(cells[3].textContent.trim()) || 0;
+    const description = cells[2].textContent.trim(); // Description column
+    const status = cells[3].querySelector('.status-badge').textContent.trim(); // Status from badge
+    const profileCount = parseInt(cells[4].textContent.trim()) || 0; // ✅ CORRECT INDEX (4)
     
     allCampaigns.push({
       id: id,
       name: name,
       status: status,
+      description: description,
       profile_count: profileCount
     });
   });
   
   renderDropdownItems();
+}
+
+// Also update the renderDropdownItems function to show description:
+function renderDropdownItems() {
+  const dropdownMenu = document.getElementById('dropdownMenu');
+  
+  if (allCampaigns.length === 0) {
+    dropdownMenu.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">No campaigns available</div>';
+    return;
+  }
+  
+  dropdownMenu.innerHTML = allCampaigns.map(campaign => `
+    <div class="dropdown-item" onclick="toggleCampaignSelection(${campaign.id})">
+      <div class="campaign-info">
+        <div class="campaign-name">${campaign.name}</div>
+        <div class="campaign-details">
+          ID: ${campaign.id} • Status: ${campaign.status} • Profiles: ${campaign.profile_count}
+          ${campaign.description && campaign.description !== 'No description' ? ' • ' + campaign.description.substring(0, 50) + (campaign.description.length > 50 ? '...' : '') : ''}
+        </div>
+      </div>
+      <input type="checkbox" class="campaign-checkbox" id="campaign_${campaign.id}" ${selectedCampaigns.has(campaign.id) ? 'checked' : ''}>
+    </div>
+  `).join('');
 }
 
 function renderDropdownItems() {
@@ -957,8 +1023,11 @@ function updateSelectedDisplay() {
   }
 }
 
+// Replace the performMerge function in your campaigns.html with this fixed version:
+
 function performMerge() {
   const campaignName = document.getElementById('mergedCampaignName').value.trim();
+  const campaignDescription = document.getElementById('merged_campaign_description').value.trim(); // ✅ GET DESCRIPTION
   
   if (!campaignName) {
     alert('Please enter a name for the merged campaign');
@@ -995,17 +1064,16 @@ function performMerge() {
   nameInput.value = campaignName;
   form.appendChild(nameInput);
   
+  // ✅ ADD CAMPAIGN DESCRIPTION
+  const descriptionInput = document.createElement('input');
+  descriptionInput.type = 'hidden';
+  descriptionInput.name = 'merged_campaign_description';
+  descriptionInput.value = campaignDescription;
+  form.appendChild(descriptionInput);
+  
   document.body.appendChild(form);
   form.submit();
 }
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(event) {
-  const dropdownContainer = document.querySelector('.dropdown-container');
-  if (dropdownContainer && !dropdownContainer.contains(event.target) && dropdownOpen) {
-    toggleDropdown();
-  }
-});
 
 // Close popup when clicking outside
 document.addEventListener('click', function(event) {
@@ -1038,6 +1106,7 @@ document.addEventListener('click', function(event) {
   // Add active class to clicked button
   event.target.classList.add('active');
 }
+
     function initializeTable() {
       const tableBody = document.getElementById('tableBody');
       allRows = Array.from(tableBody.getElementsByTagName('tr'));
@@ -1185,6 +1254,10 @@ document.addEventListener('click', function(event) {
     <div style="margin: 20px 0;">
       <label for="mergedCampaignName">New Campaign Name:</label>
       <input type="text" id="mergedCampaignName" placeholder="Enter merged campaign name..." style="width: 100%; padding: 10px; margin-top: 8px; border: 2px solid #dee2e6; border-radius: 6px;">
+    </div>
+     <div class="merge-group">
+      <label for="merged_campaign_description">Campaign Description (Optional)</label>
+      <input type="text" id="merged_campaign_description" name="merged_campaign_description" placeholder="Describe this merged campaign..." style="width: 100%; padding: 10px; margin-top: 8px; border: 2px solid #dee2e6; border-radius: 6px;">
     </div>
     
     <div class="popup-buttons">

@@ -111,6 +111,12 @@ def init_db():
             print("✅ Added email_status column to leads table")
         except sqlite3.OperationalError:
             print("ℹ️ email_status column already exists")
+            # Add this inside your init_db() function after existing ALTER TABLE statements
+        try:
+            c.execute("ALTER TABLE campaigns ADD COLUMN description TEXT")
+            print("✅ Added description column to campaigns table")
+        except sqlite3.OperationalError:
+            print("ℹ️ description column already exists")
 
         conn.commit()
 
@@ -195,15 +201,16 @@ def home():
     return redirect('/campaigns')
 
 # --- SHOW ALL CAMPAIGNS WITH PROFILE COUNTS ---
+# In campaigns route, update the query:
 @app.route('/campaigns')
 def campaigns():
     db = get_db()
     cursor = db.cursor()
     cursor.execute("""
-        SELECT c.id, c.name, c.status, COUNT(l.id) as profile_count
+        SELECT c.id, c.name, c.status, c.description, COUNT(l.id) as profile_count
         FROM campaigns c
         LEFT JOIN leads l ON c.id = l.campaign_id
-        GROUP BY c.id, c.name, c.status
+        GROUP BY c.id, c.name, c.status, c.description
         ORDER BY c.id DESC
     """)
     campaigns = cursor.fetchall()
@@ -219,6 +226,7 @@ def campaigns():
 def merge_campaigns():
     campaign_ids = request.form.getlist('campaign_ids[]')
     merged_campaign_name = request.form.get('merged_campaign_name', '').strip()
+    merged_campaign_description = request.form.get('merged_campaign_description', '').strip()
     
     if len(campaign_ids) < 2:
         flash('Please select at least 2 campaigns to merge', 'error')
@@ -288,24 +296,24 @@ def merge_campaigns():
         # Create new merged campaign with conditional columns
         if has_created_at and has_is_merged:
             cursor.execute("""
-                INSERT INTO campaigns (name, status, created_at, is_merged) 
-                VALUES (?, 'pending', ?, 1)
-            """, (merged_campaign_name, datetime.now()))
+                INSERT INTO campaigns (name,description, status, created_at, is_merged) 
+                VALUES (?,?,'pending', ?, 1)
+            """, (merged_campaign_name,merged_campaign_description, datetime.now()))
         elif has_created_at:
             cursor.execute("""
-                INSERT INTO campaigns (name, status, created_at) 
-                VALUES (?, 'pending', ?)
-            """, (merged_campaign_name, datetime.now()))
+                INSERT INTO campaigns (name,description, status, created_at) 
+                VALUES (?,?, 'pending', ?)
+            """, (merged_campaign_name,merged_campaign_description, datetime.now()))
         elif has_is_merged:
             cursor.execute("""
-                INSERT INTO campaigns (name, status, is_merged) 
-                VALUES (?, 'pending', 1)
-            """, (merged_campaign_name,))
+                INSERT INTO campaigns (name,description, status, is_merged) 
+                VALUES (?,?, 'pending', 1)
+            """, (merged_campaign_name,merged_campaign_description))
         else:
             cursor.execute("""
-                INSERT INTO campaigns (name, status) 
-                VALUES (?, 'pending')
-            """, (merged_campaign_name,))
+                INSERT INTO campaigns (name,description, status) 
+                VALUES (?,?, 'pending')
+            """, (merged_campaign_name,merged_campaign_description))
         
         merged_campaign_id = cursor.lastrowid
         
@@ -412,6 +420,7 @@ def upload_csv():
     
     file = request.files['csv_file']
     campaign_name = request.form.get('campaign_name', '').strip()
+    campaign_description = request.form.get('campaign_description', '').strip()
     
     if file.filename == '':
         flash('No file selected', 'error')
@@ -473,9 +482,9 @@ def upload_csv():
             
             # Create new campaign
             cursor.execute("""
-                INSERT INTO campaigns (name, status, created_at) 
-                VALUES (?, 'pending', ?)
-            """, (campaign_name, datetime.now()))
+                INSERT INTO campaigns (name,description, status, created_at) 
+                VALUES (?, ?,'pending', ?)
+            """, (campaign_name,campaign_description, datetime.now()))
             campaign_id = cursor.lastrowid
             
             # Insert unique leads
@@ -948,7 +957,8 @@ def get_campaign_unsubscribe_urls(campaign_id):
     })
 
 # --- UPLOAD ENDPOINT (FROM N8N) WITH DUPLICATE DETECTION ---
-# --- UPLOAD ENDPOINT (FROM N8N) WITH DUPLICATE DETECTION --- (FIXED VERSION)
+# Fix the upload_leads function - replace the problematic section with this:
+
 @app.route('/upload', methods=['POST'])
 def upload_leads():
     data = request.get_json()
@@ -962,6 +972,7 @@ def upload_leads():
             return jsonify({"status": "error", "message": "Empty data array"}), 400
 
     campaign_name = data.get("campaign_name")
+    campaign_description = data.get("campaign_description", "")
     leads = data.get("leads")
 
     if not campaign_name or not leads:
@@ -1019,21 +1030,21 @@ def upload_leads():
         db = get_db()
         cursor = db.cursor()
 
-        # Campaign insert
+        # Campaign insert - FIXED THIS SECTION
         cursor.execute("PRAGMA table_info(campaigns)")
         campaigns_columns = [col[1] for col in cursor.fetchall()]
         has_created_at = 'created_at' in campaigns_columns
 
         if has_created_at:
             cursor.execute("""
-                INSERT INTO campaigns (name, status, created_at) 
-                VALUES (?, 'pending', ?)
-            """, (campaign_name, datetime.now()))
+                INSERT INTO campaigns (name, description, status, created_at) 
+                VALUES (?, ?, 'pending', ?)
+            """, (campaign_name, campaign_description, datetime.now()))
         else:
             cursor.execute("""
-                INSERT INTO campaigns (name, status) 
-                VALUES (?, 'pending')
-            """, (campaign_name,))
+                INSERT INTO campaigns (name, description, status) 
+                VALUES (?, ?, 'pending')
+            """, (campaign_name, campaign_description))  # FIXED: Removed /merge_campaigns
         
         campaign_id = cursor.lastrowid
 
@@ -1304,11 +1315,11 @@ def merge_campaigns_page():
     if has_is_merged:
         # Get only previously merged campaigns for the table
         cursor.execute("""
-            SELECT c.id, c.name, c.status, COUNT(l.id) as profile_count
+            SELECT c.id, c.name, c.status,c.description, COUNT(l.id) as profile_count
             FROM campaigns c
             LEFT JOIN leads l ON c.id = l.campaign_id
             WHERE c.is_merged = 1
-            GROUP BY c.id, c.name, c.status
+            GROUP BY c.id, c.name, c.status,c.description
             ORDER BY c.id DESC
         """)
     else:
@@ -1330,11 +1341,11 @@ def get_available_campaigns():
     # Get all campaigns with their profile counts
     # You can modify this query to exclude certain campaigns if needed
     cursor.execute("""
-        SELECT c.id, c.name, c.status, COUNT(l.id) as profile_count
+        SELECT c.id, c.name, c.status,c.description, COUNT(l.id) as profile_count
         FROM campaigns c
         LEFT JOIN leads l ON c.id = l.campaign_id
         WHERE c.id IS NOT NULL
-        GROUP BY c.id, c.name, c.status
+        GROUP BY c.id, c.name, c.status,c.description,
         ORDER BY c.id DESC
     """)
     
@@ -1347,7 +1358,8 @@ def get_available_campaigns():
             'id': campaign[0],
             'name': campaign[1],
             'status': campaign[2],
-            'profile_count': campaign[3] if campaign[3] else 0
+            'description': campaign[3] or '',
+            'profile_count': campaign[4] if campaign[4] else 0
         })
     
     return jsonify(campaigns_list)

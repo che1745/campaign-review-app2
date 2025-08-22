@@ -541,6 +541,35 @@
         grid-template-columns: repeat(2, 1fr);
       }
     }
+
+
+  /* Add to existing CSS in both templates */
+.upload-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 768px) {
+  .upload-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+.merge-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 15px;
+  align-items: end;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .merge-controls {
+    grid-template-columns: 1fr;
+  }
+}
   </style>
 </head>
 <body>
@@ -632,6 +661,7 @@
             <tr>
               <th>ID</th>
               <th>Campaign Name</th>
+              <th>Description</th>
               <th>Status</th>
               <th>Profile Count</th>
               <th>Actions</th>
@@ -643,12 +673,17 @@
               <td><strong>#{{ c[0] }}</strong></td>
               <td>{{ c[1] }}</td>
               <td>
+                <span style="color: #6c757d; font-size: 13px; max-width: 200px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ c[3] or 'No description' }}">
+                  {{ c[3] or 'No description' }}
+                </span>
+              </td>
+              <td>
                 <span class="status-badge 
                   {% if c[2] == 'approved' %}status-approved
                   {% elif c[2] == 'pending' %}status-pending
                   {% else %}status-draft{% endif %}">{{ c[2] }}</span>
               </td>
-              <td><strong>{{ c[3] if c[3] else 0 }}</strong></td>
+              <td><strong>{{ c[4] if c[4] else 0 }}</strong></td>
               <td>
                 <div class="actions">
                   <a href="{{ url_for('campaign_detail', campaign_id=c[0], referrer='merge') }}" class="btn btn-view">👥 View Profiles</a>
@@ -701,25 +736,26 @@
 
     // Render dropdown items
     function renderDropdownItems() {
-      const dropdownMenu = document.getElementById('dropdownMenu');
-      
-      if (allCampaigns.length === 0) {
-        dropdownMenu.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">No campaigns available for merging</div>';
-        return;
-      }
-      
-      dropdownMenu.innerHTML = allCampaigns.map(campaign => `
-        <div class="dropdown-item" onclick="toggleCampaignSelection(${campaign.id})">
-          <div class="campaign-info">
-            <div class="campaign-name">${campaign.name}</div>
-            <div class="campaign-details">
-              ID: ${campaign.id} â€¢ Status: ${campaign.status} â€¢ Profiles: ${campaign.profile_count}
-            </div>
-          </div>
-          <input type="checkbox" class="campaign-checkbox" id="campaign_${campaign.id}" ${selectedCampaigns.has(campaign.id) ? 'checked' : ''}>
+  const dropdownMenu = document.getElementById('dropdownMenu');
+  
+  if (allCampaigns.length === 0) {
+    dropdownMenu.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">No campaigns available for merging</div>';
+    return;
+  }
+  
+  dropdownMenu.innerHTML = allCampaigns.map(campaign => `
+    <div class="dropdown-item" onclick="toggleCampaignSelection(${campaign.id})">
+      <div class="campaign-info">
+        <div class="campaign-name">${campaign.name}</div>
+        <div class="campaign-details">
+          ID: ${campaign.id} • Status: ${campaign.status} • Profiles: ${campaign.profile_count}
+          ${campaign.description ? '<br><em>' + campaign.description + '</em>' : ''}
         </div>
-      `).join('');
-    }
+      </div>
+      <input type="checkbox" class="campaign-checkbox" id="campaign_${campaign.id}" ${selectedCampaigns.has(campaign.id) ? 'checked' : ''}>
+    </div>
+  `).join('');
+}
 
     // Toggle dropdown
     function toggleDropdown() {
@@ -842,42 +878,49 @@
 
     // Handle form submission
     document.getElementById('mergeForm').addEventListener('submit', function(e) {
-      const mergedName = document.getElementById('merged_campaign_name').value.trim();
-      
-      if (!mergedName) {
-        alert('Please enter a name for the merged campaign');
-        e.preventDefault();
-        return;
-      }
-      
-      if (selectedCampaigns.size < 2) {
-        alert('Please select at least 2 campaigns to merge');
-        e.preventDefault();
-        return;
-      }
-      
-      // Add selected campaign IDs to form
-      const existingInputs = this.querySelectorAll('input[name="campaign_ids[]"]');
-      existingInputs.forEach(input => input.remove());
-      
-      selectedCampaigns.forEach((campaign, id) => {
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'campaign_ids[]';
-        hiddenInput.value = id;
-        this.appendChild(hiddenInput);
-      });
-      
-      if (!confirm(`Are you sure you want to merge ${selectedCampaigns.size} campaigns into "${mergedName}"?\n\nThis action cannot be undone. Original campaigns will be deleted.`)) {
-        e.preventDefault();
-        return;
-      }
-      
-      // Show loading state
-      const btn = document.getElementById('mergeBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<span>â³</span> Merging Campaigns...';
-    });
+  const mergedName = document.getElementById('merged_campaign_name').value.trim();
+  const mergedDescription = document.getElementById('merged_campaign_description').value.trim();
+  
+  if (!mergedName) {
+    alert('Please enter a name for the merged campaign');
+    e.preventDefault();
+    return;
+  }
+  
+  if (selectedCampaigns.size < 2) {
+    alert('Please select at least 2 campaigns to merge');
+    e.preventDefault();
+    return;
+  }
+  
+  // Add selected campaign IDs to form
+  const existingInputs = this.querySelectorAll('input[name="campaign_ids[]"]');
+  existingInputs.forEach(input => input.remove());
+  
+  selectedCampaigns.forEach((campaign, id) => {
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'campaign_ids[]';
+    hiddenInput.value = id;
+    this.appendChild(hiddenInput);
+  });
+  
+  let confirmMessage = `Are you sure you want to merge ${selectedCampaigns.size} campaigns into "${mergedName}"?`;
+  if (mergedDescription) {
+    confirmMessage += `\nDescription: ${mergedDescription}`;
+  }
+  confirmMessage += '\n\nThis action cannot be undone. Original campaigns will be deleted.';
+  
+  if (!confirm(confirmMessage)) {
+    e.preventDefault();
+    return;
+  }
+  
+  // Show loading state
+  const btn = document.getElementById('mergeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> Merging Campaigns...';
+});
   </script>
 </body>
 </html>
