@@ -1016,22 +1016,28 @@ document.addEventListener('click', function(event) {
 });
 
     function switchTab(tabName) {
-      // Hide all tab contents
-      document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-      });
-      
-      // Remove active class from all tab buttons
-      document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('active');
-      });
-      
-      // Show selected tab content
-      document.getElementById(tabName + '-tab').classList.add('active');
-      
-      // Add active class to clicked button
-      event.target.classList.add('active');
-    }
+  // If clicking on merge tab, redirect to merge campaigns page
+  if (tabName === 'merge') {
+    window.location.href = "{{ url_for('merge_campaigns_page') }}";
+    return;
+  }
+  
+  // Hide all tab contents
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  
+  // Remove active class from all tab buttons
+  document.querySelectorAll('.tab-button').forEach(button => {
+    button.classList.remove('active');
+  });
+  
+  // Show selected tab content
+  document.getElementById(tabName + '-tab').classList.add('active');
+  
+  // Add active class to clicked button
+  event.target.classList.add('active');
+}
 
     function initializeTable() {
       const tableBody = document.getElementById('tableBody');
