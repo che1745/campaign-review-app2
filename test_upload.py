@@ -865,7 +865,8 @@ def send_to_n8n(campaign_id):
     }
 
     # 5. Send to n8n webhook
-    webhook_url = "https://frog-more-lizard.ngrok-free.app/webhook-test/f7ecb2fe-1f9c-4920-be0d-2cd6bbc93561"
+    webhook_url = "https://dory-logical-briefly.ngrok-free.app/webhook-test/f7ecb2fe-1f9c-4920-be0d-2cd6bbc93561" #test
+    # webhook_url = "https://dory-logical-briefly.ngrok-free.app/webhook/f7ecb2fe-1f9c-4920-be0d-2cd6bbc93561" #production
     try:
         response = requests.post(webhook_url, json=payload)
         response.raise_for_status()
