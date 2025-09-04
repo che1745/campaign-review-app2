@@ -391,6 +391,8 @@
       box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4) !important;
       transform: translateY(-2px) scale(1.02) !important;
     }
+
+    
     
     /* Disabled States */
     .btn:disabled {
@@ -693,6 +695,20 @@
         font-size: 12px;
       }
     }
+
+  .pagination button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+.pagination button:disabled:hover {
+    transform: none !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    background: linear-gradient(135deg, white, #f8fafc) !important;
+    color: #667eea !important;
+}
   </style>
 </head>
 <body>
@@ -860,10 +876,10 @@
     </div>
     
     <div class="pagination" id="pagination">
-      <button id="prevBtn" onclick="changePage(-1)">← Previous</button>
-      <span id="pageInfo">Page 1 of 1</span>
-      <button id="nextBtn" onclick="changePage(1)">Next →</button>
-    </div>
+    <button id="prevBtn" onclick="changePage(-1)" type="button">← Previous</button>
+    <span id="pageInfo">Page 1 of 1</span>
+    <button id="nextBtn" onclick="changePage(1)" type="button">Next →</button>
+</div>
     
     <div class="actions-bar">
       <a href="{{ url_for('add_lead', campaign_id=campaign_id, referrer=referrer) }}" class="btn btn-primary">➕ Add New Profile</a>
@@ -977,6 +993,86 @@ function searchAndFilter() {
       // Update select all checkbox
       updateSelectAllCheckbox();
     }
+
+  // Add these functions to your campaign_detail.html script section
+
+function changePage(direction) {
+    const totalPages = Math.ceil(filteredRows.length / recordsPerPage);
+    
+    if (direction === 1 && currentPage < totalPages) {
+        currentPage++;
+    } else if (direction === -1 && currentPage > 1) {
+        currentPage--;
+    }
+    
+    updateDisplay();
+    
+    // Scroll to top of table after page change
+    document.getElementById('leadsTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Also update your updateDisplay function to properly handle pagination buttons
+// Add these functions to your campaign_detail.html script section
+
+function changePage(direction) {
+    const totalPages = Math.ceil(filteredRows.length / recordsPerPage);
+    
+    if (direction === 1 && currentPage < totalPages) {
+        currentPage++;
+    } else if (direction === -1 && currentPage > 1) {
+        currentPage--;
+    }
+    
+    updateDisplay();
+    
+    // Scroll to top of table after page change
+    document.getElementById('leadsTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Also update your updateDisplay function to properly handle pagination buttons
+function updateDisplay() {
+    const startIndex = (currentPage - 1) * recordsPerPage;
+    const endIndex = startIndex + recordsPerPage;
+    const totalPages = Math.ceil(filteredRows.length / recordsPerPage);
+    
+    // Hide all rows first
+    allRows.forEach(row => row.style.display = 'none');
+    
+    // Show current page rows
+    const currentRows = filteredRows.slice(startIndex, endIndex);
+    currentRows.forEach(row => row.style.display = '');
+    
+    // Update pagination controls
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pageInfo = document.getElementById('pageInfo');
+    
+    if (prevBtn) prevBtn.disabled = currentPage === 1 || totalPages === 0;
+    if (nextBtn) nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+    if (pageInfo) {
+        pageInfo.textContent = totalPages > 0 ? `Page ${currentPage} of ${totalPages}` : 'Page 0 of 0';
+    }
+    
+    // Update records count
+    const recordsCount = document.getElementById('recordsCount');
+    if (recordsCount) recordsCount.textContent = filteredRows.length;
+    
+    // Show/hide no results message
+    const noResults = document.getElementById('noResults');
+    const table = document.getElementById('leadsTable');
+    if (filteredRows.length === 0) {
+        if (noResults) noResults.style.display = 'block';
+        if (table) table.style.display = 'none';
+    } else {
+        if (noResults) noResults.style.display = 'none';
+        if (table) table.style.display = 'table';
+    }
+    
+    // Update select all checkbox
+    updateSelectAllCheckbox();
+}
+
+
 
 function updateStatusCounts() {
   const activeCount = allRows.filter(row => row.getAttribute('data-status') === 'active').length;
