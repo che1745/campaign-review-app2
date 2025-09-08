@@ -124,6 +124,23 @@ def init_db():
         except sqlite3.OperationalError:
             pass
 
+            # Add processing tracking columns
+        try:
+            c.execute("ALTER TABLE campaigns ADD COLUMN last_processed_at TIMESTAMP")
+            print("✅ Added last_processed_at column to campaigns table")
+        except sqlite3.OperationalError:
+            print("ℹ️ last_processed_at column already exists")
+        try:
+            c.execute("ALTER TABLE campaigns ADD COLUMN process_count INTEGER DEFAULT 0")
+            print("✅ Added process_count column to campaigns table")
+        except sqlite3.OperationalError:
+            print("ℹ️ process_count column already exists")
+        try:
+            c.execute("ALTER TABLE campaigns ADD COLUMN processing_status TEXT DEFAULT 'not_sent'")
+            print("✅ Added processing_status column to campaigns table")
+        except sqlite3.OperationalError:
+            print("ℹ️ processing_status column already exists")
+
         conn.commit()
 
 # --- UTILITY FUNCTIONS ---
@@ -207,17 +224,17 @@ def home():
     return redirect('/campaigns')
 
 # --- SHOW ALL CAMPAIGNS WITH PROFILE COUNTS ---
-# In campaigns route, update the query:
 @app.route('/campaigns')
 def campaigns():
     db = get_db()
     cursor = db.cursor()
     cursor.execute("""
-        SELECT c.id, c.name, c.status, c.description, COUNT(l.id) as profile_count
+        SELECT c.id, c.name, c.status, c.description, COUNT(l.id) as profile_count, 
+               c.processing_status, c.last_processed_at, c.process_count
         FROM campaigns c
         LEFT JOIN leads l ON c.id = l.campaign_id
         WHERE (c.is_merged IS NULL OR c.is_merged = 0)
-        GROUP BY c.id, c.name, c.status, c.description
+        GROUP BY c.id, c.name, c.status, c.description, c.processing_status, c.last_processed_at, c.process_count
         ORDER BY c.id DESC
     """)
     campaigns = cursor.fetchall()
@@ -869,6 +886,15 @@ def send_to_n8n(campaign_id):
     try:
         response = requests.post(webhook_url, json=payload)
         response.raise_for_status()
+
+        cursor.execute("""
+        UPDATE campaigns 
+        SET processing_status = 'sent', 
+            last_processed_at = ?, 
+            process_count = COALESCE(process_count, 0) + 1
+        WHERE id = ?
+        """, (datetime.now(), campaign_id))
+        db.commit()
         flash(f'Campaign processed successfully! ({len(leads_data)} active, subscribed profiles sent to n8n)', 'success')
         print(f"✅ Sent {len(leads_data)} leads with unsubscribe URLs to n8n successfully.")
         
@@ -876,6 +902,15 @@ def send_to_n8n(campaign_id):
         print(f"📨 n8n Response Status: {response.status_code}")
         if response.text:
             print(f"📨 n8n Response: {response.text}")
+
+    except requests.RequestException as e:
+    # Update status to failed
+        cursor.execute("""
+        UPDATE campaigns 
+        SET processing_status = 'failed'
+        WHERE id = ?
+        """, (campaign_id,))
+        db.commit()
             
     except requests.RequestException as e:
         flash(f'Failed to process campaign: {str(e)}', 'error')
@@ -1315,16 +1350,15 @@ def merge_campaigns_page():
     if has_is_merged:
         # Get only previously merged campaigns for the table
         cursor.execute("""
-            SELECT c.id, c.name, c.status,c.description, COUNT(l.id) as profile_count
+            SELECT c.id, c.name, c.status, c.description, COUNT(l.id) as profile_count,
+                   c.processing_status, c.last_processed_at, c.process_count
             FROM campaigns c
             LEFT JOIN leads l ON c.id = l.campaign_id
             WHERE c.is_merged = 1 AND c.name NOT LIKE 'Original:%'
-            GROUP BY c.id, c.name, c.status,c.description
+            GROUP BY c.id, c.name, c.status, c.description, c.processing_status, c.last_processed_at, c.process_count
             ORDER BY c.id DESC
         """)
     else:
-        # If is_merged column doesn't exist, show all campaigns
-        # You might want to create an empty list instead
         campaigns = []
     
     campaigns = cursor.fetchall() if has_is_merged else []
