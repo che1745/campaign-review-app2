@@ -151,15 +151,26 @@
       border-color: #667eea;
     }
     
-    .file-input-wrapper input[type=file] {
-      position: absolute;
-      left: 0;
-      top: 0;
-      opacity: 0;
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-    }
+    .file-input-wrapper {
+  cursor: pointer;
+}
+
+.file-input-wrapper input[type=file] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.file-input-text {
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+}
     
     .file-input-text {
       color: #6c757d;
@@ -759,9 +770,9 @@
             
             <div class="form-group">
               <label>CSV File</label>
-              <div class="file-input-wrapper" onclick="document.getElementById('csv_file').click()">
+              <div class="file-input-wrapper">
                 <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
-                <span class="file-input-text" id="fileText">Choose file...</span>
+                  <span class="file-input-text" id="fileText">Choose file...</span>
               </div>
             </div>
             
@@ -1178,10 +1189,17 @@ document.addEventListener('click', function(event) {
     }
 
     // File input handling
-    document.getElementById('csv_file').addEventListener('change', function(e) {
-      const fileName = e.target.files[0] ? e.target.files[0].name : 'Choose file...';
-      document.getElementById('fileText').textContent = fileName;
-    });
+    // File input handling
+document.getElementById('csv_file').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    document.getElementById('fileText').textContent = file.name;
+    document.getElementById('fileText').style.color = '#495057'; // Show file is selected
+  } else {
+    document.getElementById('fileText').textContent = 'Choose file...';
+    document.getElementById('fileText').style.color = '#6c757d'; // Default color
+  }
+});
 
     // Form validation and submission
     document.getElementById('uploadForm').addEventListener('submit', function(e) {

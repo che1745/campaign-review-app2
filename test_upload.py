@@ -117,6 +117,12 @@ def init_db():
             print("✅ Added description column to campaigns table")
         except sqlite3.OperationalError:
             print("ℹ️ description column already exists")
+            # Ensure existing distributed lists are marked correctly
+        try:
+            c.execute("UPDATE campaigns SET is_merged = 0 WHERE is_merged IS NULL")
+            print("✅ Updated existing campaigns with is_merged = 0")
+        except sqlite3.OperationalError:
+            pass
 
         conn.commit()
 
@@ -210,6 +216,7 @@ def campaigns():
         SELECT c.id, c.name, c.status, c.description, COUNT(l.id) as profile_count
         FROM campaigns c
         LEFT JOIN leads l ON c.id = l.campaign_id
+        WHERE (c.is_merged IS NULL OR c.is_merged = 0)
         GROUP BY c.id, c.name, c.status, c.description
         ORDER BY c.id DESC
     """)
@@ -219,8 +226,6 @@ def campaigns():
 # --- MERGE CAMPAIGNS ---
 # Replace your merge_campaigns function with this updated version
 # This version handles the missing created_at column gracefully
-
-# Replace your existing merge_campaigns function with this corrected version
 
 @app.route('/merge_campaigns', methods=['POST'])
 def merge_campaigns():
@@ -240,7 +245,7 @@ def merge_campaigns():
         db = get_db()
         cursor = db.cursor()
         
-        # Check if campaigns table has created_at column
+        # Check if campaigns table has required columns
         cursor.execute("PRAGMA table_info(campaigns)")
         columns_info = cursor.fetchall()
         has_created_at = any(col[1] == 'created_at' for col in columns_info)
@@ -281,9 +286,9 @@ def merge_campaigns():
                 'label': lead[6] or '',
                 'description': lead[7] or '',
                 'source': lead[8] or 'Merged Campaign',
-                'email_status': lead[9],  # PRESERVE email status
-                'unsubscribe_status': lead[10],  # PRESERVE unsubscribe status
-                'unsubscribe_token': lead[11] or generate_unsubscribe_token()  # PRESERVE or generate token
+                'email_status': lead[9],
+                'unsubscribe_status': lead[10],
+                'unsubscribe_token': lead[11] or generate_unsubscribe_token()
             })
         
         # Remove duplicates based on email (but preserve the LATEST email status)
@@ -293,32 +298,32 @@ def merge_campaigns():
             flash('No valid profiles found after removing duplicates', 'error')
             return redirect(url_for('campaigns'))
         
-        # Create new merged campaign with conditional columns
+        # Create new merged campaign - ALWAYS set is_merged = 1 for merged campaigns
         if has_created_at and has_is_merged:
             cursor.execute("""
-                INSERT INTO campaigns (name,description, status, created_at, is_merged) 
-                VALUES (?,?,'pending', ?, 1)
-            """, (merged_campaign_name,merged_campaign_description, datetime.now()))
+                INSERT INTO campaigns (name, description, status, created_at, is_merged) 
+                VALUES (?, ?, 'pending', ?, 1)
+            """, (merged_campaign_name, merged_campaign_description, datetime.now()))
         elif has_created_at:
             cursor.execute("""
-                INSERT INTO campaigns (name,description, status, created_at) 
-                VALUES (?,?, 'pending', ?)
-            """, (merged_campaign_name,merged_campaign_description, datetime.now()))
+                INSERT INTO campaigns (name, description, status, created_at) 
+                VALUES (?, ?, 'pending', ?)
+            """, (merged_campaign_name, merged_campaign_description, datetime.now()))
         elif has_is_merged:
             cursor.execute("""
-                INSERT INTO campaigns (name,description, status, is_merged) 
-                VALUES (?,?, 'pending', 1)
-            """, (merged_campaign_name,merged_campaign_description))
+                INSERT INTO campaigns (name, description, status, is_merged) 
+                VALUES (?, ?, 'pending', 1)
+            """, (merged_campaign_name, merged_campaign_description))
         else:
             cursor.execute("""
-                INSERT INTO campaigns (name,description, status) 
-                VALUES (?,?, 'pending')
-            """, (merged_campaign_name,merged_campaign_description))
+                INSERT INTO campaigns (name, description, status) 
+                VALUES (?, ?, 'pending')
+            """, (merged_campaign_name, merged_campaign_description))
         
         merged_campaign_id = cursor.lastrowid
         
-        # If is_merged column exists but wasn't handled above, update it
-        if has_is_merged and not (has_created_at and has_is_merged):
+        # Ensure merged campaign is marked as merged (for cases where column exists)
+        if has_is_merged:
             cursor.execute("""
                 UPDATE campaigns SET is_merged = 1 
                 WHERE id = ?
@@ -336,10 +341,9 @@ def merge_campaigns():
         has_unsubscribe_status = 'unsubscribe_status' in leads_columns
         has_unsubscribe_token = 'unsubscribe_token' in leads_columns
         
-        # Insert unique leads into the new campaign (PRESERVE EMAIL STATUS)
+        # Insert unique leads into the new merged campaign (PRESERVE EMAIL STATUS)
         leads_added = 0
         for lead in unique_leads:
-            # Build dynamic INSERT query based on available columns
             columns = ['campaign_id', 'first_name', 'last_name', 'email', 'domain', 'score', 'company', 'label', 'description']
             values = [
                 merged_campaign_id,
@@ -388,21 +392,16 @@ def merge_campaigns():
             """, values)
             leads_added += 1
         
-        # Delete original campaigns and their leads
-        campaign_names = [camp[1] for camp in existing_campaigns]
-        
-        # Delete leads from original campaigns
-        cursor.execute(f"DELETE FROM leads WHERE campaign_id IN ({placeholders})", campaign_ids)
-        
-        # Delete original campaigns
-        cursor.execute(f"DELETE FROM campaigns WHERE id IN ({placeholders})", campaign_ids)
+        # DO NOT DELETE OR MARK ORIGINAL CAMPAIGNS - LEAVE THEM AS DISTRIBUTED LISTS
+        # Original campaigns remain in first tab with is_merged = 0 or NULL
         
         db.commit()
         
-        success_message = f'Successfully merged {len(campaign_ids)} campaigns into "{merged_campaign_name}"'
+        campaign_names = [camp[1] for camp in existing_campaigns]
+        success_message = f'Successfully merged {len(campaign_ids)} distributed lists into "{merged_campaign_name}"'
         if duplicate_count > 0:
             success_message += f' - Removed {duplicate_count} duplicate profiles'
-        success_message += f' - {leads_added} unique profiles added (email status preserved)'
+        success_message += f' - {leads_added} unique profiles added (original lists preserved)'
         
         flash(success_message, 'success')
         return redirect(url_for('campaign_detail', campaign_id=merged_campaign_id))
@@ -1319,7 +1318,7 @@ def merge_campaigns_page():
             SELECT c.id, c.name, c.status,c.description, COUNT(l.id) as profile_count
             FROM campaigns c
             LEFT JOIN leads l ON c.id = l.campaign_id
-            WHERE c.is_merged = 1
+            WHERE c.is_merged = 1 AND c.name NOT LIKE 'Original:%'
             GROUP BY c.id, c.name, c.status,c.description
             ORDER BY c.id DESC
         """)
@@ -1345,7 +1344,7 @@ def get_available_campaigns():
         SELECT c.id, c.name, c.status,c.description, COUNT(l.id) as profile_count
         FROM campaigns c
         LEFT JOIN leads l ON c.id = l.campaign_id
-        WHERE c.id IS NOT NULL
+        WHERE (c.is_merged IS NULL OR c.is_merged = 0)
         GROUP BY c.id, c.name, c.status,c.description,
         ORDER BY c.id DESC
     """)
