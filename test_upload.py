@@ -424,7 +424,7 @@ def upload_csv():
     if file.filename == '':
         flash('No file selected', 'error')
         return redirect(url_for('campaigns'))
-    
+    ff
     if not campaign_name:
         flash('Campaign name is required', 'error')
         return redirect(url_for('campaigns'))
