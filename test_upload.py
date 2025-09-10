@@ -801,54 +801,88 @@ def send_to_n8n(campaign_id):
     db = get_db()
     cursor = db.cursor()
 
-    # 1. Check campaign status
+    # Get excluded lead IDs from form if provided
+    excluded_lead_ids = request.form.getlist('excluded_leads[]')
+    # Get included lead IDs from form if provided (for include-only mode)
+    included_lead_ids = request.form.getlist('included_leads[]')
+    
+    # Check campaign status
     cursor.execute("SELECT status FROM campaigns WHERE id = ?", (campaign_id,))
     status = cursor.fetchone()
     if not status or status[0] != 'approved':
         flash('Campaign is not approved', 'error')
         return redirect(url_for('campaigns'))
 
-    # 2. Fetch only ACTIVE leads with proper email status logic
-    # Priority: Manual email_status overrides external unsubscribe_status
-    cursor.execute("""
-        SELECT id, first_name, last_name, email, company, domain, score, label, description, source, unsubscribe_token
-        FROM leads 
-        WHERE campaign_id = ? 
-        AND is_active = 1 
-        AND (
-            -- Case 1: email_status is explicitly 'subscribed' (manual override)
-            email_status = 'subscribed'
-            OR 
-            -- Case 2: email_status is NULL/default and not externally unsubscribed
-            (
-                (email_status IS NULL OR email_status = 'subscribed') 
-                AND (unsubscribe_status IS NULL OR unsubscribe_status = 'subscribed')
+    # Build the query based on include/exclude mode
+    if included_lead_ids:
+        # Include mode: only process selected leads
+        placeholders = ','.join('?' for _ in included_lead_ids)
+        base_query = f"""
+            SELECT id, first_name, last_name, email, company, domain, score, label, description, source, unsubscribe_token
+            FROM leads 
+            WHERE campaign_id = ? 
+            AND is_active = 1 
+            AND id IN ({placeholders})
+            AND (
+                email_status = 'subscribed'
+                OR 
+                (
+                    (email_status IS NULL OR email_status = 'subscribed') 
+                    AND (unsubscribe_status IS NULL OR unsubscribe_status = 'subscribed')
+                )
             )
-        )
-    """, (campaign_id,))
+        """
+        query_params = [campaign_id] + included_lead_ids
+        mode_message = f"include only {len(included_lead_ids)} selected leads"
+        
+    else:
+        # Exclude mode (default): process all except excluded leads
+        base_query = """
+            SELECT id, first_name, last_name, email, company, domain, score, label, description, source, unsubscribe_token
+            FROM leads 
+            WHERE campaign_id = ? 
+            AND is_active = 1 
+            AND (
+                email_status = 'subscribed'
+                OR 
+                (
+                    (email_status IS NULL OR email_status = 'subscribed') 
+                    AND (unsubscribe_status IS NULL OR unsubscribe_status = 'subscribed')
+                )
+            )
+        """
+        query_params = [campaign_id]
+        
+        # Add exclusion condition if there are excluded leads
+        if excluded_lead_ids:
+            placeholders = ','.join('?' for _ in excluded_lead_ids)
+            base_query += f" AND id NOT IN ({placeholders})"
+            query_params.extend(excluded_lead_ids)
+            mode_message = f"exclude {len(excluded_lead_ids)} selected duplicates"
+        else:
+            mode_message = "process all leads (no exclusions)"
+    
+    cursor.execute(base_query, query_params)
     leads = cursor.fetchall()
 
     if not leads:
-        flash('No active, subscribed profiles found in this campaign', 'error')
+        flash('No active, subscribed profiles found after filtering', 'error')
         return redirect(url_for('campaigns'))
 
-    # 3. Prepare leads data with unsubscribe URLs
+    # Rest of your existing send_to_n8n logic remains the same
     leads_data = []
-    base_url = request.url_root.rstrip('/')  # Get your app's base URL
+    base_url = request.url_root.rstrip('/')
     leads_without_tokens = []
     
     for lead in leads:
         lead_id = lead[0]
-        unsubscribe_token = lead[10]  # unsubscribe_token from query
+        unsubscribe_token = lead[10]
         
-        # If lead doesn't have unsubscribe token, generate one
         if not unsubscribe_token:
             unsubscribe_token = generate_unsubscribe_token()
-            # Update the database with new token
             cursor.execute("UPDATE leads SET unsubscribe_token = ? WHERE id = ?", (unsubscribe_token, lead_id))
             leads_without_tokens.append(lead_id)
         
-        # Construct unsubscribe URL
         unsubscribe_url = f"{base_url}/unsubscribe/{unsubscribe_token}"
         
         lead_dict = {
@@ -862,7 +896,7 @@ def send_to_n8n(campaign_id):
             "label": lead[7],
             "description": lead[8],
             "source": lead[9],
-            "unsubscribe_url": unsubscribe_url,  # Only the URL, not full email body
+            "unsubscribe_url": unsubscribe_url,
             "unsubscribe_token": unsubscribe_token
         }
         
@@ -871,18 +905,16 @@ def send_to_n8n(campaign_id):
     # Commit any token updates
     if leads_without_tokens:
         db.commit()
-        print(f"✅ Generated tokens for {len(leads_without_tokens)} leads")
 
-    # 4. Prepare payload for n8n
+    # Continue with existing n8n sending logic...
     payload = {
         "campaign_id": campaign_id,
         "total_leads": len(leads_data),
+        "processing_mode": mode_message,
         "leads": leads_data
     }
 
-    # 5. Send to n8n webhook
-    webhook_url = "https://dory-logical-briefly.ngrok-free.app/webhook-test/f7ecb2fe-1f9c-4920-be0d-2cd6bbc93561" #test
-    # webhook_url = "https://dory-logical-briefly.ngrok-free.app/webhook/f7ecb2fe-1f9c-4920-be0d-2cd6bbc93561" #production
+    webhook_url = "https://dory-logical-briefly.ngrok-free.app/webhook-test/f7ecb2fe-1f9c-4920-be0d-2cd6bbc93561"
     try:
         response = requests.post(webhook_url, json=payload)
         response.raise_for_status()
@@ -895,29 +927,19 @@ def send_to_n8n(campaign_id):
         WHERE id = ?
         """, (datetime.now(), campaign_id))
         db.commit()
-        flash(f'Campaign processed successfully! ({len(leads_data)} active, subscribed profiles sent to n8n)', 'success')
-        print(f"✅ Sent {len(leads_data)} leads with unsubscribe URLs to n8n successfully.")
         
-        # Optional: Log the response from n8n
-        print(f"📨 n8n Response Status: {response.status_code}")
-        if response.text:
-            print(f"📨 n8n Response: {response.text}")
+        flash(f'Campaign processed successfully! ({len(leads_data)} profiles sent to n8n, mode: {mode_message})', 'success')
 
     except requests.RequestException as e:
-    # Update status to failed
         cursor.execute("""
         UPDATE campaigns 
         SET processing_status = 'failed'
         WHERE id = ?
         """, (campaign_id,))
         db.commit()
-            
-    except requests.RequestException as e:
         flash(f'Failed to process campaign: {str(e)}', 'error')
-        print(f"❌ Failed to send to n8n: {e}")
 
     return redirect(url_for('campaigns'))
-
 # Optional: Add a route to get just the unsubscribe URL for a specific lead
 @app.route('/api/lead/<int:lead_id>/unsubscribe_url')
 def get_lead_unsubscribe_url(lead_id):
@@ -1658,6 +1680,116 @@ def get_email_status_stats(campaign_id):
         "subscribed": subscribed_count,
         "unsubscribed": unsubscribed_count,
         "total": total_count
+    })
+
+@app.route('/process_confirmation/<int:campaign_id>')
+def process_confirmation(campaign_id):
+    """Show processing confirmation page with lead comparison options"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Get current campaign info
+    cursor.execute("SELECT name, status FROM campaigns WHERE id = ?", (campaign_id,))
+    campaign = cursor.fetchone()
+    
+    if not campaign or campaign[1] != 'approved':
+        flash('Campaign not found or not approved', 'error')
+        return redirect(url_for('campaigns'))
+    
+    # Check if is_merged column exists
+    cursor.execute("PRAGMA table_info(campaigns)")
+    columns_info = cursor.fetchall()
+    has_is_merged = any(col[1] == 'is_merged' for col in columns_info)
+    
+    # Get previously processed MERGED campaigns only (not distributed lists)
+    if has_is_merged:
+        cursor.execute("""
+            SELECT c.id, c.name, c.last_processed_at, c.process_count, 
+                   COUNT(l.id) as profile_count
+            FROM campaigns c
+            LEFT JOIN leads l ON c.id = l.campaign_id AND l.is_active = 1
+            WHERE c.processing_status = 'sent' 
+            AND c.id != ?
+            AND c.is_merged = 1
+            GROUP BY c.id, c.name, c.last_processed_at, c.process_count
+            ORDER BY c.last_processed_at DESC
+        """, (campaign_id,))
+    else:
+        # Fallback if is_merged column doesn't exist - you might want to add other criteria
+        cursor.execute("""
+            SELECT c.id, c.name, c.last_processed_at, c.process_count, 
+                   COUNT(l.id) as profile_count
+            FROM campaigns c
+            LEFT JOIN leads l ON c.id = l.campaign_id AND l.is_active = 1
+            WHERE c.processing_status = 'sent' 
+            AND c.id != ?
+            AND c.name NOT LIKE 'Original:%'
+            GROUP BY c.id, c.name, c.last_processed_at, c.process_count
+            ORDER BY c.last_processed_at DESC
+        """, (campaign_id,))
+    
+    processed_campaigns = cursor.fetchall()
+    
+    return render_template("process_confirmation.html", 
+                         campaign_id=campaign_id,
+                         campaign_name=campaign[0],
+                         processed_campaigns=processed_campaigns)
+
+@app.route('/api/compare_leads/<int:current_campaign_id>/<int:processed_campaign_id>')
+def compare_leads(current_campaign_id, processed_campaign_id):
+    """Compare leads between current campaign and processed campaign"""
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Get current campaign active leads
+    cursor.execute("""
+        SELECT id, first_name, last_name, email, company
+        FROM leads 
+        WHERE campaign_id = ? AND is_active = 1
+        AND (
+            email_status = 'subscribed'
+            OR 
+            (
+                (email_status IS NULL OR email_status = 'subscribed') 
+                AND (unsubscribe_status IS NULL OR unsubscribe_status = 'subscribed')
+            )
+        )
+    """, (current_campaign_id,))
+    current_leads = cursor.fetchall()
+    
+    # Get processed campaign leads (emails only for comparison)
+    cursor.execute("""
+        SELECT LOWER(TRIM(email)) as email
+        FROM leads 
+        WHERE campaign_id = ?
+    """, (processed_campaign_id,))
+    processed_emails = set([row[0] for row in cursor.fetchall()])
+    
+    # Find duplicates
+    duplicates = []
+    unique_leads = []
+    
+    for lead in current_leads:
+        lead_email = lead[3].lower().strip()
+        lead_data = {
+            'id': lead[0],
+            'first_name': lead[1],
+            'last_name': lead[2],
+            'email': lead[3],
+            'company': lead[4]
+        }
+        
+        if lead_email in processed_emails:
+            duplicates.append(lead_data)
+        else:
+            unique_leads.append(lead_data)
+    
+    return jsonify({
+        'total_leads': len(current_leads),
+        'unique_leads': len(unique_leads),
+        'duplicate_leads': len(duplicates),
+        'duplicates': duplicates,
+        'unique': unique_leads
     })
 
 if __name__ == '__main__':

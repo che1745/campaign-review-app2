@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Process Campaign - Lead Comparison</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    h2 {
+      color: #2c3e50;
+      margin: 0;
+      font-size: 2em;
+    }
+
+    .back-link {
+      color: #667eea;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      padding: 10px 20px;
+      border: 2px solid #667eea;
+      border-radius: 25px;
+      transition: all 0.3s;
+    }
+    
+    .back-link:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .campaign-info {
+      background: #e3f2fd;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border-left: 5px solid #2196f3;
+    }
+
+    .comparison-section {
+      background: #f8f9fa;
+      padding: 25px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border: 2px solid #dee2e6;
+    }
+
+    .comparison-title {
+      font-size: 1.3em;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #2c3e50;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .processed-campaigns {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .campaign-card {
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .campaign-card:hover {
+      border-color: #007bff;
+      box-shadow: 0 4px 15px rgba(0,123,255,0.2);
+    }
+
+    .campaign-card.selected {
+      border-color: #007bff;
+      background: #e3f2fd;
+    }
+
+    .campaign-card input[type="radio"] {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+    }
+
+    .comparison-results {
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .comparison-results.show {
+      display: block;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+    }
+
+    .stat-number {
+      font-size: 1.8em;
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6c757d;
+      margin-top: 5px;
+    }
+
+    .duplicate-leads {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .duplicate-leads.show {
+      display: block;
+    }
+
+    .duplicate-title {
+      font-weight: 600;
+      color: #856404;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .leads-table {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+    }
+
+    .leads-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .leads-table th,
+    .leads-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #dee2e6;
+      font-size: 14px;
+    }
+
+    .leads-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+
+    .leads-table tr:hover {
+      background: #f8f9fa;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #007bff, #0056b3);
+      color: white;
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #ffc107, #e0a800);
+      color: #212529;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #28a745, #1e7e34);
+      color: white;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .selection-options {
+      background: #e8f5e8;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      display: none;
+    }
+
+    .selection-options.show {
+      display: block;
+    }
+
+    .option-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .option-btn {
+      padding: 8px 16px;
+      border: 2px solid #28a745;
+      background: white;
+      color: #28a745;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .option-btn.active {
+      background: #28a745;
+      color: white;
+    }
+
+    .option-btn:hover {
+      background: #28a745;
+      color: white;
+    }
+
+    .flash-messages {
+      margin-bottom: 20px;
+    }
+    
+    .flash-message {
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    
+    .flash-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .flash-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .no-processed {
+      text-align: center;
+      padding: 40px;
+      color: #6c757d;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 2px dashed #dee2e6;
+    }
+
+    /* Add these styles to your existing CSS in process_confirmation.html */
+
+.duplicate-title {
+  font-weight: 600;
+  color: #856404;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.select-all-btn {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.select-all-btn:hover {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-1px);
+}
+
+.duplicate-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #495057;
+}
+
+.selection-counter {
+  font-weight: 500;
+}
+
+.selection-counter span {
+  color: #007bff;
+  font-weight: 600;
+}
+
+.leads-table th input[type="checkbox"] {
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+.leads-table td input[type="checkbox"] {
+  transform: scale(1.1);
+  cursor: pointer;
+}
+
+.leads-table tr.selected {
+  background-color: #e3f2fd !important;
+}
+
+/* Add some visual feedback for selected rows */
+.leads-table tbody tr:hover {
+  background: #f8f9fa;
+  cursor: pointer;
+}
+
+.leads-table tbody tr.has-selected-checkbox {
+  background: #e8f5e8;
+}
+
+@media (max-width: 768px) {
+  .duplicate-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .duplicate-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="header">
+      <h2>🚀 Process Campaign</h2>
+      <a href="{{ url_for('campaigns') }}" class="back-link">← Back to Campaigns</a>
+    </div>
+
+    <div class="campaign-info">
+      <h3 style="margin: 0 0 10px 0; color: #1976d2;">📋 Campaign: {{ campaign_name }}</h3>
+      <p style="margin: 0; color: #666;">Before processing, check if leads overlap with previously processed campaigns to avoid duplicates.</p>
+    </div>
+
+    <div class="comparison-section">
+      <div class="comparison-title">
+        <span>🔍</span>
+        Compare with Previously Processed Campaigns
+      </div>
+
+      {% if processed_campaigns %}
+        <p style="color: #6c757d; margin-bottom: 20px;">Select a previously processed campaign to compare leads:</p>
+        
+        <div class="processed-campaigns">
+          {% for pc in processed_campaigns %}
+          <div class="campaign-card" onclick="selectCampaign({{ pc[0] }})">
+            <input type="radio" name="comparison_campaign" value="{{ pc[0] }}" id="campaign_{{ pc[0] }}">
+            <h4 style="margin: 0 0 10px 0; color: #2c3e50;">{{ pc[1] }}</h4>
+            <div style="font-size: 13px; color: #6c757d;">
+              <div>📊 {{ pc[4] }} profiles</div>
+              <div>🕒 Processed {{ pc[3] }} time(s)</div>
+              <div>📅 Last: 
+                {% if pc[2] %}
+                  {% set dt_str = pc[2]|string %}
+                  {% if '.' in dt_str %}
+                    {{ dt_str.split('.')[0] }}
+                  {% else %}
+                    {{ pc[2] }}
+                  {% endif %}
+                {% else %}
+                  Unknown
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="comparison-results" id="comparisonResults">
+          <div class="stats-grid" id="statsGrid">
+            <!-- Stats will be populated by JavaScript -->
+          </div>
+          
+          <!-- Replace the duplicate-leads section in your process_confirmation.html with this: -->
+
+<div class="duplicate-leads" id="duplicateLeads">
+  <div class="duplicate-title">
+    <span>⚠️</span>
+    Duplicate Leads Found
+    <button class="select-all-btn" id="selectAllBtn" onclick="selectAllDuplicates()">
+      Select All
+    </button>
+  </div>
+  <div class="duplicate-controls">
+    <span class="selection-counter">
+      <span id="selectedCounter">0</span> of <span id="totalCounter">0</span> selected
+    </span>
+  </div>
+  <div class="leads-table">
+    <table id="duplicateTable">
+      <thead>
+        <tr>
+          <th style="width: 50px;">
+            <input type="checkbox" id="masterCheckbox" onchange="toggleAllLeads(this.checked)" title="Select/Deselect All">
+          </th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Company</th>
+        </tr>
+      </thead>
+      <tbody id="duplicateTableBody">
+        <!-- Duplicate leads will be populated here -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+          <div class="selection-options" id="selectionOptions">
+            <div class="option-buttons">
+              <button class="option-btn active" onclick="setSelectionMode('exclude')">Exclude Selected Duplicates</button>
+              <button class="option-btn" onclick="setSelectionMode('include')">Include Only Selected</button>
+            </div>
+            <p style="margin: 0; font-size: 14px; color: #666;" id="selectionDescription">
+              Selected duplicates will be excluded from processing
+            </p>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-primary" onclick="compareLeads()" id="compareBtn" disabled>
+            <span>🔍</span>
+            Compare Leads
+          </button>
+          
+          <button class="btn btn-warning" onclick="proceedWithoutComparison()" id="skipBtn">
+            <span>⚡</span>
+            Process Without Comparison
+          </button>
+          
+          <form method="POST" action="{{ url_for('send_to_n8n', campaign_id=campaign_id) }}" id="processForm" style="display: inline;">
+            <button type="submit" class="btn btn-success" id="processBtn" style="display: none;">
+              <span>🚀</span>
+              Process Campaign
+            </button>
+          </form>
+        </div>
+
+      {% else %}
+        <div class="no-processed">
+          <h3>No Previously Processed Campaigns</h3>
+          <p>This is your first campaign or no campaigns have been processed yet.</p>
+          <p>You can proceed directly to processing.</p>
+        </div>
+
+        <div class="action-buttons">
+          <form method="POST" action="{{ url_for('send_to_n8n', campaign_id=campaign_id) }}">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Process this campaign now?')">
+              <span>🚀</span>
+              Process Campaign
+            </button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    let selectedCampaign = null;
+    let comparisonData = null;
+    let selectionMode = 'exclude';
+    let selectedLeads = new Set();
+
+    function selectCampaign(campaignId) {
+      selectedCampaign = campaignId;
+      
+      // Update radio button
+      document.getElementById(`campaign_${campaignId}`).checked = true;
+      
+      // Update visual selection
+      document.querySelectorAll('.campaign-card').forEach(card => card.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+      
+      // Enable compare button
+      document.getElementById('compareBtn').disabled = false;
+      
+      // Hide previous results
+      document.getElementById('comparisonResults').classList.remove('show');
+    }
+
+    async function compareLeads() {
+      if (!selectedCampaign) {
+        alert('Please select a campaign to compare with');
+        return;
+      }
+
+      const compareBtn = document.getElementById('compareBtn');
+      compareBtn.disabled = true;
+      compareBtn.innerHTML = '<span>⏳</span> Comparing...';
+
+      try {
+        const response = await fetch(`/api/compare_leads/{{ campaign_id }}/${selectedCampaign}`);
+        comparisonData = await response.json();
+        
+        displayComparisonResults();
+        
+      } catch (error) {
+        console.error('Error comparing leads:', error);
+        alert('Error comparing leads. Please try again.');
+      } finally {
+        compareBtn.disabled = false;
+        compareBtn.innerHTML = '<span>🔍</span> Compare Leads';
+      }
+    }
+
+    // Updated displayComparisonResults function to include counter updates
+function displayComparisonResults() {
+  const resultsDiv = document.getElementById('comparisonResults');
+  const statsGrid = document.getElementById('statsGrid');
+  const duplicateLeads = document.getElementById('duplicateLeads');
+  
+  // Show results
+  resultsDiv.classList.add('show');
+  
+  // Update stats
+  statsGrid.innerHTML = `
+    <div class="stat-item">
+      <div class="stat-number">${comparisonData.total_leads}</div>
+      <div class="stat-label">Total Leads</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">${comparisonData.unique_leads}</div>
+      <div class="stat-label">Unique Leads</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">${comparisonData.duplicate_leads}</div>
+      <div class="stat-label">Duplicates</div>
+    </div>
+  `;
+  
+  // Show duplicates if any
+  if (comparisonData.duplicate_leads > 0) {
+    duplicateLeads.classList.add('show');
+    displayDuplicateLeads();
+    document.getElementById('selectionOptions').classList.add('show');
+  }
+  
+  // Show process button
+  document.getElementById('processBtn').style.display = 'inline-flex';
+}
+
+// Shortcut functions for the Select All button
+function selectAllDuplicates() {
+  document.getElementById('masterCheckbox').checked = true;
+  toggleAllLeads(true);
+}
+
+function deselectAllDuplicates() {
+  document.getElementById('masterCheckbox').checked = false;
+  toggleAllLeads(false);
+}
+
+// Updated displayDuplicateLeads function
+function displayDuplicateLeads() {
+  const tableBody = document.getElementById('duplicateTableBody');
+  tableBody.innerHTML = comparisonData.duplicates.map(lead => `
+    <tr>
+      <td>
+        <input type="checkbox" value="${lead.id}" onchange="toggleLeadSelection(${lead.id}, this.checked)">
+      </td>
+      <td>${lead.first_name} ${lead.last_name}</td>
+      <td>${lead.email}</td>
+      <td>${lead.company || 'N/A'}</td>
+    </tr>
+  `).join('');
+  
+  // Reset everything when displaying new results
+  selectedLeads.clear();
+  updateSelectionCounter();
+  updateMasterCheckbox();
+  updateSelectAllButton();
+  
+  // Make rows clickable for better UX
+  addRowClickHandlers();
+}
+
+
+// Add click handlers to make entire rows clickable
+function addRowClickHandlers() {
+  const rows = document.querySelectorAll('#duplicateTableBody tr');
+  rows.forEach(row => {
+    row.addEventListener('click', function(event) {
+      // Don't trigger if the checkbox itself was clicked
+      if (event.target.type === 'checkbox') return;
+      
+      const checkbox = row.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        const leadId = parseInt(checkbox.value);
+        toggleLeadSelection(leadId, checkbox.checked);
+      }
+    });
+    
+    // Add cursor pointer to indicate clickable rows
+    row.style.cursor = 'pointer';
+  });
+}
+
+
+ function toggleLeadSelection(leadId, isSelected) {
+  const checkbox = document.querySelector(`input[value="${leadId}"]`);
+  const row = checkbox.closest('tr');
+  
+  if (isSelected) {
+    selectedLeads.add(leadId);
+    row.classList.add('has-selected-checkbox');
+  } else {
+    selectedLeads.delete(leadId);
+    row.classList.remove('has-selected-checkbox');
+  }
+  
+  updateSelectionCounter();
+  updateMasterCheckbox();
+  updateSelectAllButton();
+  updateProcessForm();
+  
+  console.log(`Lead ${leadId} ${isSelected ? 'selected' : 'deselected'}`);
+}
+// Updated updateSelectAllButton function
+function updateSelectAllButton() {
+  const checkboxes = document.querySelectorAll('#duplicateTableBody input[type="checkbox"]');
+  const selectAllBtn = document.getElementById('selectAllBtn');
+  
+  if (!selectAllBtn || checkboxes.length === 0) return;
+  
+  const checkedCount = document.querySelectorAll('#duplicateTableBody input[type="checkbox"]:checked').length;
+  
+  if (checkedCount === checkboxes.length && checkboxes.length > 0) {
+    selectAllBtn.textContent = 'Deselect All';
+    selectAllBtn.onclick = deselectAllDuplicates;
+  } else {
+    selectAllBtn.textContent = 'Select All';
+    selectAllBtn.onclick = selectAllDuplicates;
+  }
+}
+
+    
+// Replace the existing setSelectionMode and related functions with these:
+
+function setSelectionMode(mode) {
+  selectionMode = mode;
+  
+  // Update button states
+  document.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('active'));
+  
+  // Find the clicked button and make it active
+  const clickedButton = event.target;
+  clickedButton.classList.add('active');
+  
+  // Update description
+  const description = mode === 'exclude' 
+    ? 'Selected duplicates will be excluded from processing'
+    : 'Only selected leads will be processed';
+  document.getElementById('selectionDescription').textContent = description;
+  
+  // Update form based on new mode
+  updateProcessForm();
+  
+  // If switching to "include" mode, we need to handle the form differently
+  if (mode === 'include') {
+    console.log('Mode switched to: Include only selected');
+  } else {
+    console.log('Mode switched to: Exclude selected duplicates');
+  }
+}
+
+   function updateProcessForm() {
+  const form = document.getElementById('processForm');
+  
+  // Clear existing hidden inputs
+  form.querySelectorAll('input[name="excluded_leads[]"]').forEach(input => input.remove());
+  form.querySelectorAll('input[name="included_leads[]"]').forEach(input => input.remove());
+  
+  // Add selected leads based on mode
+  if (selectionMode === 'exclude' && selectedLeads.size > 0) {
+    // Exclude mode: add selected leads to exclusion list
+    selectedLeads.forEach(leadId => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'excluded_leads[]';
+      input.value = leadId;
+      form.appendChild(input);
+    });
+  } else if (selectionMode === 'include' && selectedLeads.size > 0) {
+    // Include mode: add selected leads to inclusion list
+    selectedLeads.forEach(leadId => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'included_leads[]';
+      input.value = leadId;
+      form.appendChild(input);
+    });
+  }
+  
+  console.log(`Updated form for ${selectionMode} mode with ${selectedLeads.size} selected leads`);
+}
+
+    function proceedWithoutComparison() {
+      if (confirm('Process campaign without checking for duplicates?')) {
+        document.getElementById('processForm').submit();
+      }
+    }
+
+    // Form submission handler
+    document.getElementById('processForm').addEventListener('submit', function(e) {
+      const excludedCount = selectedLeads.size;
+      const message = excludedCount > 0 
+        ? `Process campaign with ${excludedCount} leads excluded?`
+        : 'Process this campaign now?';
+      
+      if (!confirm(message)) {
+        e.preventDefault();
+      }
+    });
+
+
+    function selectCampaign(campaignId) {
+  selectedCampaign = parseInt(campaignId); // Convert back to number if needed
+  
+  // Update radio button
+  document.getElementById(`campaign_${campaignId}`).checked = true;
+  
+  // Update visual selection
+  document.querySelectorAll('.campaign-card').forEach(card => card.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  
+  // Enable compare button
+  document.getElementById('compareBtn').disabled = false;
+  
+  // Hide previous results
+  document.getElementById('comparisonResults').classList.remove('show');
+}
+
+function selectAllDuplicates() {
+  const checkboxes = document.querySelectorAll('#duplicateTableBody input[type="checkbox"]');
+  const selectAllBtn = document.getElementById('selectAllBtn');
+  
+  checkboxes.forEach(checkbox => {
+    if (!checkbox.checked) {
+      checkbox.checked = true;
+      const leadId = parseInt(checkbox.value);
+      selectedLeads.add(leadId);
+    }
+  });
+  
+  // Update button text and function
+  selectAllBtn.textContent = 'Deselect All';
+  selectAllBtn.onclick = deselectAllDuplicates;
+  
+  updateProcessForm();
+  console.log('All duplicates selected:', Array.from(selectedLeads));
+}
+
+function deselectAllDuplicates() {
+  const checkboxes = document.querySelectorAll('#duplicateTableBody input[type="checkbox"]');
+  const selectAllBtn = document.getElementById('selectAllBtn');
+  
+  checkboxes.forEach(checkbox => {
+    if (checkbox.checked) {
+      checkbox.checked = false;
+      const leadId = parseInt(checkbox.value);
+      selectedLeads.delete(leadId);
+    }
+  });
+  
+  // Update button text and function
+  selectAllBtn.textContent = 'Select All';
+  selectAllBtn.onclick = selectAllDuplicates;
+  
+  updateProcessForm();
+  console.log('All duplicates deselected');
+}
+
+// Function to handle the master checkbox in the table header
+function toggleAllLeads(isChecked) {
+  const checkboxes = document.querySelectorAll('#duplicateTableBody input[type="checkbox"]');
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = isChecked;
+    const leadId = parseInt(checkbox.value);
+    
+    if (isChecked) {
+      selectedLeads.add(leadId);
+      // Add visual feedback
+      checkbox.closest('tr').classList.add('has-selected-checkbox');
+    } else {
+      selectedLeads.delete(leadId);
+      // Remove visual feedback
+      checkbox.closest('tr').classList.remove('has-selected-checkbox');
+    }
+  });
+  
+  updateSelectionCounter();
+  updateSelectAllButton();
+  updateProcessForm();
+  
+  console.log(`${isChecked ? 'Selected' : 'Deselected'} all duplicates:`, Array.from(selectedLeads));
+}
+
+// Update the selection counter
+function updateSelectionCounter() {
+  const selectedCounter = document.getElementById('selectedCounter');
+  const totalCounter = document.getElementById('totalCounter');
+  
+  if (selectedCounter && totalCounter) {
+    selectedCounter.textContent = selectedLeads.size;
+    totalCounter.textContent = comparisonData ? comparisonData.duplicates.length : 0;
+  }
+}
+
+// Update the master checkbox state based on individual selections
+function updateMasterCheckbox() {
+  const masterCheckbox = document.getElementById('masterCheckbox');
+  const checkboxes = document.querySelectorAll('#duplicateTableBody input[type="checkbox"]');
+  
+  if (!masterCheckbox || checkboxes.length === 0) return;
+  
+  const checkedCount = document.querySelectorAll('#duplicateTableBody input[type="checkbox"]:checked').length;
+  
+  if (checkedCount === 0) {
+    masterCheckbox.checked = false;
+    masterCheckbox.indeterminate = false;
+  } else if (checkedCount === checkboxes.length) {
+    masterCheckbox.checked = true;
+    masterCheckbox.indeterminate = false;
+  } else {
+    masterCheckbox.checked = false;
+    masterCheckbox.indeterminate = true;
+  }
+}
+
+  </script>
+</body>
+</html>

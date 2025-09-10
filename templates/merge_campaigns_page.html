@@ -733,10 +733,8 @@
         <button type="submit" class="btn btn-delete" onclick="return confirm('⚠️ Are you sure you want to delete this campaign and all its profiles?')">🗑️ Delete</button>
       </form>
       {% if c[2] == 'approved' %}
-      <form method="POST" action="{{ url_for('send_to_n8n', campaign_id=c[0]) }}" style="display:inline;">
-        <button type="submit" class="btn btn-send" onclick="return confirm('Send approved campaign to n8n for processing?')">🚀 Process</button>
-      </form>
-      {% endif %}
+<a href="{{ url_for('process_confirmation', campaign_id=c[0]) }}" class="btn btn-send">🚀 Process</a>
+{% endif %}
     </div>
   </td>
 </tr>
