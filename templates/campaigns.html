@@ -806,6 +806,24 @@
           </form>
         </div>
 
+        <!-- Add this after the existing upload-form div -->
+<div class="upload-section" style="margin-top: 15px;">
+  <div class="upload-title">
+    <span>🔗</span>
+    Create Distribution List via N8N
+  </div>
+  
+  <div style="display: flex; align-items: center; gap: 15px;">
+    <p style="margin: 0; color: #6c757d; font-size: 14px;">
+      Use our online n8n form to create a new distribution list directly
+    </p>
+    <button type="button" class="btn" onclick="openDistributionForm()" style="background: linear-gradient(135deg, #764ba2, #667eea); color: white; padding: 12px 20px; font-weight: 600;">
+      <span>📝</span>
+      Open Form
+    </button>
+  </div>
+</div>
+
         <!-- Search and Filter -->
         <div class="search-container">
           <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search Distributed List by name, status..." />
@@ -1282,6 +1300,20 @@ document.getElementById('csv_file').addEventListener('change', function(e) {
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', initializeTable);
+
+
+    function openDistributionForm() {
+  const confirmed = confirm('🔗 This will open an external form to create a distribution list.\n\nAfter submitting the form, the list will be automatically added to this page.\n\nContinue?');
+  
+  if (confirmed) {
+    window.open('https://dory-logical-briefly.ngrok-free.app/form/f6fbe90a-637d-4dc7-8542-1035bb500bc8', '_blank');
+    
+    // Optional: Show instructions
+    setTimeout(() => {
+      alert('💡 Tip: After submitting the form, refresh this page to see your new distribution list.');
+    }, 1000);
+  }
+}
   </script>
 
   <!-- Merge Popup -->
